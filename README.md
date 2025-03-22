@@ -13,7 +13,7 @@ Netrunner acts as a middleware layer between your applications and AI service pr
 
 This proxy is designed to be simple yet effective, focusing on performance and security without adding unnecessary complexity.
 
-## Quickstart
+## Installation
 
 ### Using Go
 
