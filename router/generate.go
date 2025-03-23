@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"netrunner/model"
 	"netrunner/register"
-	"netrunner/requests"
+	"netrunner/request"
 	"path"
 	"strings"
 	"time"
@@ -18,11 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Proxy(c *gin.Context, registry *register.Registry, httpClient *http.Client, hook func(*model.GeneratePayload) error) {
+func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, hook func(*gin.Context, *model.GeneratePayload) (int, error)) {
 
 	// ========================= Request Metrics =========================
 
-	metrics := requests.Metrics{
+	metrics := request.Metrics{
 		StartTime: time.Now(),
 	}
 
@@ -52,7 +52,7 @@ func Proxy(c *gin.Context, registry *register.Registry, httpClient *http.Client,
 	log.Printf("reading request made to %s 🚀\n", c.Param("path"))
 	fmt.Println()
 
-	var generateRequest requests.GenerateRequest
+	var generateRequest request.GenerateRequest
 	if err := c.ShouldBindJSON(&generateRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -64,7 +64,7 @@ func Proxy(c *gin.Context, registry *register.Registry, httpClient *http.Client,
 
 	modelLookupStart := time.Now()
 
-	generatePayload, err := requests.ParseGenerateRequest(generateRequest, registry)
+	generatePayload, err := request.ParseGenerateRequest(generateRequest, registry)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -79,8 +79,8 @@ func Proxy(c *gin.Context, registry *register.Registry, httpClient *http.Client,
 	if hook != nil {
 		log.Println("entering hook function ✅")
 		fmt.Println()
-		if err := hook(&generatePayload); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if status, err := hook(c, &generatePayload); err != nil {
+			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 	} else {

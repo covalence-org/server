@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	"netrunner/register"
-	"netrunner/requests"
+	"netrunner/request"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +12,7 @@ import (
 
 func RegisterModel(c *gin.Context, r *register.Registry) {
 
-	modelInfo, err := requests.ParseRegisterRequest(c)
+	modelInfo, err := request.ParseRegisterRequest(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

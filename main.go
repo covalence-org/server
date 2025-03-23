@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"netrunner/hook"
 	"netrunner/register"
 	"netrunner/router"
 	"time"
@@ -46,7 +47,7 @@ func main() {
 
 	// Proxy endpoint - catch all requests
 	r.Any("/v1/*path", func(c *gin.Context) {
-		router.Proxy(c, registry, httpClient, nil)
+		router.Generate(c, registry, httpClient, hook.Firewall)
 	})
 
 	port := 8080
