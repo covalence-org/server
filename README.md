@@ -13,15 +13,6 @@ Netrunner acts as a middleware layer between your applications and AI service pr
 
 This proxy is designed to be simple yet effective, focusing on performance and security without adding unnecessary complexity.
 
-## Features
-
-- **Model Aliasing**: Register custom model names that map to actual provider models
-- **Request Validation**: Validate request parameters before forwarding to prevent errors
-- **Performance Metrics**: Track and log detailed metrics for each request
-- **Streaming Support**: Properly handle streaming API responses
-- **Simple API**: Easy-to-use REST API for management and proxying
-- **High Performance**: Optimized for low latency and high throughput
-
 ## Installation
 
 ### Using Go
@@ -113,6 +104,15 @@ for chunk in response:
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")
 ```
+
+## Features
+
+- **Model Aliasing**: Register custom model names that map to actual provider models
+- **Request Validation**: Validate request parameters before forwarding to prevent errors
+- **Performance Metrics**: Track and log detailed metrics for each request
+- **Streaming Support**: Properly handle streaming API responses
+- **Simple API**: Easy-to-use REST API for management and proxying
+- **High Performance**: Optimized for low latency and high throughput
 
 ## Configuration
 
