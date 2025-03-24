@@ -1,6 +1,6 @@
 # Netrunner
 
-A lightweight, high-performance proxy server for AI model APIs that enables model name aliasing, request validation, and performance monitoring.
+A firewall for your AI models.
 
 ## Overview
 
