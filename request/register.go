@@ -2,8 +2,8 @@ package request
 
 import (
 	"errors"
-	"netrunner/model"
 	"netrunner/types"
+	"netrunner/user"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,29 +16,29 @@ type RegisterRequest struct {
 	ApiUrl string `json:"api_url" binding:"required"`
 }
 
-func ParseRegisterRequest(raw *gin.Context) (model.Model, error) {
+func ParseRegisterRequest(raw *gin.Context) (user.Model, error) {
 
 	var payload RegisterRequest
 	if err := raw.ShouldBindJSON(&payload); err != nil {
-		return model.Model{}, errors.New("invalid request format")
+		return user.Model{}, errors.New("invalid request format")
 	}
 
 	name, err := types.NewName(payload.Name)
 	if err != nil {
-		return model.Model{}, errors.New("invalid name")
+		return user.Model{}, errors.New("invalid name")
 	}
 
-	modelName, err := types.NewModel(payload.Model)
+	modelName, err := types.NewUserModel(payload.Model)
 	if err != nil {
-		return model.Model{}, errors.New("invalid model")
+		return user.Model{}, errors.New("invalid model")
 	}
 
 	apiUrl, err := types.NewApiUrl(payload.ApiUrl)
 	if err != nil {
-		return model.Model{}, errors.New("invalid api url")
+		return user.Model{}, errors.New("invalid api url")
 	}
 
-	return model.Model{
+	return user.Model{
 		Name:      name,
 		Model:     modelName,
 		ApiUrl:    apiUrl,

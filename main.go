@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"netrunner/hook"
+	"netrunner/internal"
 	"netrunner/register"
 	"netrunner/router"
 	"time"
@@ -19,6 +20,10 @@ func main() {
 
 	// Create model registry
 	registry := register.NewModelRegistry()
+
+	// Load Internal Models
+	filePath := "internal/models.yaml"
+	internal.LoadModels(filePath)
 
 	// Create a custom HTTP client with connection pooling
 	httpClient := &http.Client{

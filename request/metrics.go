@@ -14,6 +14,6 @@ type Metrics struct {
 	TotalProcessTime  time.Duration
 	StatusCode        int
 	Name              types.Name
-	Model             types.Model
+	Model             types.UserModel
 	StreamingResponse bool
 }
