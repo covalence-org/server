@@ -6,18 +6,18 @@ import (
 )
 
 type Message struct {
-	role    string
-	content string
+	Role    string
+	Content string
 }
 
 func (s Message) Complete() bool {
-	return s.role != "" && s.content != ""
+	return s.Role != "" && s.Content != ""
 }
 
 func (s Message) ToMap() map[string]string {
 	return map[string]string{
-		"role":    s.role,
-		"content": s.content,
+		"role":    s.Role,
+		"content": s.Content,
 	}
 }
 

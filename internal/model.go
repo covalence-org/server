@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"log"
 	"netrunner/types"
 	"os"
@@ -81,4 +82,14 @@ func CheckModelExists(model types.InternalModel) bool {
 // GetModels returns the loaded models.
 func GetModels() []Model {
 	return models
+}
+
+// GetModels returns the loaded models.
+func GetModel(model string) (Model, error) {
+	for _, m := range models {
+		if m.Model.String() == model {
+			return m, nil
+		}
+	}
+	return Model{}, errors.New("Model not found")
 }
