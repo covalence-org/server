@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"netrunner/firewall"
 	"netrunner/register"
 	"netrunner/request"
 	"netrunner/user"
@@ -18,7 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, hook func(*gin.Context, *user.GeneratePayload) (int, error)) {
+func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, firewallConfig *firewall.Config, hook func(*gin.Context, *user.GeneratePayload, *firewall.Config) (int, error)) {
 
 	// ========================= Request Metrics =========================
 
@@ -79,7 +80,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	if hook != nil {
 		log.Println("entering hook function ✅")
 		fmt.Println()
-		if status, err := hook(c, &generatePayload); err != nil {
+		if status, err := hook(c, &generatePayload, firewallConfig); err != nil {
 			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}

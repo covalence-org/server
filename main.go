@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"netrunner/hook"
+	"netrunner/firewall"
 	"netrunner/internal"
 	"netrunner/register"
 	"netrunner/router"
@@ -24,6 +24,13 @@ func main() {
 	// Load Internal Models
 	filePath := "internal/models.yaml"
 	internal.LoadModels(filePath)
+
+	// Load Firewall Config
+	firewallConfig, err := firewall.LoadConfig("config.yaml")
+	if err != nil {
+		log.Fatalf("failed to load firewall config: %v", err)
+		return
+	}
 
 	// Create a custom HTTP client with connection pooling
 	httpClient := &http.Client{
@@ -52,7 +59,7 @@ func main() {
 
 	// Proxy endpoint - catch all requests
 	r.Any("/v1/*path", func(c *gin.Context) {
-		router.Generate(c, registry, httpClient, hook.Firewall)
+		router.Generate(c, registry, httpClient, &firewallConfig, firewall.HookFirewalls)
 	})
 
 	port := 8080
