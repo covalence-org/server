@@ -46,27 +46,6 @@ func NewName(value string) (Name, error) {
 	return Name{value}, nil
 }
 
-// ========================= Model =========================
-
-type Model struct {
-	raw string
-}
-
-func (s Model) Complete() bool {
-	return s.raw != ""
-}
-
-func (s Model) String() string {
-	return s.raw
-}
-
-func NewModel(value string) (Model, error) {
-	if value == "" {
-		return Model{}, errors.New("Model cannot be empty")
-	}
-	return Model{value}, nil
-}
-
 // ========================= ApiUrl =========================
 
 type ApiUrl struct {

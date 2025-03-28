@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"netrunner/model"
 	"netrunner/types"
+	"netrunner/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +15,7 @@ func checkMessage(message types.Message) bool {
 	return false
 }
 
-func Firewall(c *gin.Context, payload *model.GeneratePayload) (int, error) {
+func Firewall(c *gin.Context, payload *user.GeneratePayload) (int, error) {
 	log.Printf("Firewall hook called with payload")
 	fmt.Println()
 

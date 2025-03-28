@@ -8,9 +8,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"netrunner/model"
 	"netrunner/register"
 	"netrunner/request"
+	"netrunner/user"
 	"path"
 	"strings"
 	"time"
@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, hook func(*gin.Context, *model.GeneratePayload) (int, error)) {
+func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, hook func(*gin.Context, *user.GeneratePayload) (int, error)) {
 
 	// ========================= Request Metrics =========================
 
