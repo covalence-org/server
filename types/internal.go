@@ -4,23 +4,23 @@ import (
 	"errors"
 )
 
-type InternalModel struct {
+type InternalModelName struct {
 	raw string
 }
 
-func (s InternalModel) Complete() bool {
+func (s InternalModelName) Complete() bool {
 	return s.raw != ""
 }
 
-func (s InternalModel) String() string {
+func (s InternalModelName) String() string {
 	return s.raw
 }
 
-func NewInternalModel(value string) (InternalModel, error) {
+func NewInternalModelName(value string) (InternalModelName, error) {
 	if value == "" {
-		return InternalModel{}, errors.New("Model cannot be empty")
+		return InternalModelName{}, errors.New("model cannot be empty")
 	}
-	return InternalModel{value}, nil
+	return InternalModelName{value}, nil
 }
 
 // ======== Internal Model Types ==========
@@ -43,10 +43,10 @@ func isValidInternalModelType(value string) bool {
 
 func NewInternalModelType(value string) (InternalModelType, error) {
 	if value == "" {
-		return InternalModelType{}, errors.New("Model cannot be empty")
+		return InternalModelType{}, errors.New("model cannot be empty")
 	}
 	if !isValidInternalModelType(value) {
-		return InternalModelType{}, errors.New("Invalid model type")
+		return InternalModelType{}, errors.New("invalid model type")
 	}
 	return InternalModelType{value}, nil
 }

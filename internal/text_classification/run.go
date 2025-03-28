@@ -1,4 +1,4 @@
-package internal
+package textClassification
 
 import (
 	"bytes"
@@ -10,34 +10,29 @@ import (
 )
 
 // GeneratePayload stores information about a generation request
-type TextClassificationRequest struct {
+type Request struct {
 	Model       internal.Model
 	Text        string
 	Temperature *types.Temperature // Now a pointer to make it optional
 }
 
-type TextClassificationResponse struct {
+type Response struct {
 	Probabilities []float32 `json:"probabilities"`
 	Labels        []string  `json:"labels"`
 	ModelId       string    `json:"model_id"`
 }
 
-func NewTextClassificationRequest(modelRaw string, text string) (TextClassificationRequest, error) {
-	model, err := internal.GetModel(modelRaw)
-	if err != nil {
-		return TextClassificationRequest{}, err
-	}
-
-	return TextClassificationRequest{
+func NewRequest(model internal.Model, text string) (Request, error) {
+	return Request{
 		Model: model,
 		Text:  text,
 	}, nil
 }
 
-func (m TextClassificationRequest) ToMap() map[string]interface{} {
+func (m Request) ToMap() map[string]interface{} {
 	// Start with required parameters
 	requestMap := map[string]interface{}{
-		"model": m.Model.Model.String(),
+		"model": m.Model.Name.String(),
 		"text":  m.Text,
 	}
 
@@ -48,7 +43,7 @@ func (m TextClassificationRequest) ToMap() map[string]interface{} {
 	return requestMap
 }
 
-func (m TextClassificationRequest) Run() (TextClassificationResponse, error) {
+func (m Request) Run() (Response, error) {
 	// Start with required parameters
 	requestMap := m.ToMap()
 	url := m.Model.ApiUrl.String()
@@ -56,13 +51,13 @@ func (m TextClassificationRequest) Run() (TextClassificationResponse, error) {
 	// Marshal the requestMap into JSON
 	jsonData, err := json.Marshal(requestMap)
 	if err != nil {
-		return TextClassificationResponse{}, errors.New("failed to marshal request map: " + err.Error())
+		return Response{}, errors.New("failed to marshal request map: " + err.Error())
 	}
 
 	// Create a new HTTP POST request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return TextClassificationResponse{}, errors.New("failed to create HTTP request: " + err.Error())
+		return Response{}, errors.New("failed to create HTTP request: " + err.Error())
 	}
 
 	// Set the appropriate headers
@@ -72,19 +67,19 @@ func (m TextClassificationRequest) Run() (TextClassificationResponse, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return TextClassificationResponse{}, errors.New("failed to execute HTTP request: " + err.Error())
+		return Response{}, errors.New("failed to execute HTTP request: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	// Handle the response (optional, depending on your use case)
 	if resp.StatusCode != http.StatusOK {
-		return TextClassificationResponse{}, errors.New("received non-OK HTTP status: " + resp.Status)
+		return Response{}, errors.New("received non-OK HTTP status: " + resp.Status)
 	}
 
 	// Decode the response body into a TextClassificationResponse struct
-	var response TextClassificationResponse
+	var response Response
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return TextClassificationResponse{}, errors.New("failed to decode response body: " + err.Error())
+		return Response{}, errors.New("failed to decode response body: " + err.Error())
 	}
 
 	return response, nil

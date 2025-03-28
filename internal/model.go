@@ -11,8 +11,8 @@ import (
 )
 
 type Model struct {
-	Model  types.InternalModel // Real model name to use with API
-	ApiUrl types.ApiUrl        // URL to forward the request to
+	Name   types.InternalModelName // Real model name to use with API
+	ApiUrl types.ApiUrl            // URL to forward the request to
 	Type   types.InternalModelType
 }
 
@@ -41,7 +41,7 @@ func LoadModels(filePath string) {
 
 		var parsedModels []Model
 		for _, rawModel := range rawModels {
-			model, err := types.NewInternalModel(rawModel.Model)
+			name, err := types.NewInternalModelName(rawModel.Model)
 			if err != nil {
 				log.Fatalf("failed to parse model: %v", err)
 				continue
@@ -60,7 +60,7 @@ func LoadModels(filePath string) {
 			}
 
 			parsedModels = append(parsedModels, Model{
-				Model:  model,
+				Name:   name,
 				ApiUrl: apiUrl,
 				Type:   modelType,
 			})
@@ -70,9 +70,9 @@ func LoadModels(filePath string) {
 	})
 }
 
-func CheckModelExists(model types.InternalModel) bool {
+func CheckModelExists(model types.InternalModelName) bool {
 	for _, m := range models {
-		if m.Model == model {
+		if m.Name == model {
 			return true
 		}
 	}
@@ -85,9 +85,9 @@ func GetModels() []Model {
 }
 
 // GetModels returns the loaded models.
-func GetModel(model string) (Model, error) {
+func GetModel(model types.InternalModelName) (Model, error) {
 	for _, m := range models {
-		if m.Model.String() == model {
+		if m.Name.String() == model.String() {
 			return m, nil
 		}
 	}
