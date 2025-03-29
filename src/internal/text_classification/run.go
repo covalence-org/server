@@ -59,7 +59,7 @@ func (m Request) Run() (Response, error) {
 		return Response{}, errors.New("failed to marshal request map: " + err.Error())
 	}
 
-	log.Printf("Sending request to %s with data: %s", url, string(jsonData))
+	log.Printf("sending request to %s", url)
 
 	// Create a new HTTP POST request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))

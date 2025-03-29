@@ -2,7 +2,6 @@ package firewall
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -24,6 +23,7 @@ import (
 func (f Firewall) Apply(messages []types.Message) (bool, error) {
 	message := messages[len(messages)-1]
 	if f.Enabled {
+		log.Printf(":::: running %s firewall ::::", f.Type.String())
 		switch f.Type.String() {
 		case "prompt-injection":
 			return promptInjection.Run(message, f.Model, f.BlockingThreshold)
@@ -50,8 +50,7 @@ func (f Firewall) Apply(messages []types.Message) (bool, error) {
 }
 
 func HookFirewalls(c *gin.Context, payload *user.GeneratePayload, config *Config) (int, error) {
-	log.Printf("Firewall hook called with payload")
-	fmt.Println()
+	log.Printf("firewall hook called with payload")
 
 	// Check latest message
 	for _, firewall := range config.Firewalls {
