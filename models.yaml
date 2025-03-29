@@ -1,0 +1,2 @@
+- model: meta-llama/Prompt-Guard-86M
+  type: text-classification
