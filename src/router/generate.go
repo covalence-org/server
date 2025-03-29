@@ -11,6 +11,7 @@ import (
 	"netrunner/src/firewall"
 	"netrunner/src/register"
 	"netrunner/src/request"
+	"netrunner/src/utils"
 	"netrunner/src/user"
 	"path"
 	"strings"
@@ -44,14 +45,11 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 			"path":            c.Param("path"),
 		})
 
-		log.Printf("request_metrics: %s\n", logData)
-		fmt.Println()
+		utils.BoxLog(fmt.Sprintf("request_metrics: %s", logData))
 	}()
 
 	// ========================= Read Request =========================
-	fmt.Println()
-	log.Printf("reading request made to %s 🚀\n", c.Param("path"))
-	fmt.Println()
+	utils.BoxLog(fmt.Sprintf("reading request made to %s 🚀", c.Param("path")))
 
 	var generateRequest request.GenerateRequest
 	if err := c.ShouldBindJSON(&generateRequest); err != nil {
@@ -60,8 +58,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	}
 
 	// ========================= Parse Request =========================
-	log.Printf("parsing request 🔍\n")
-	fmt.Println()
+	utils.BoxLog("parsing request 🔍")
 
 	modelLookupStart := time.Now()
 
@@ -78,20 +75,17 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	// ========================= Run Hook ===========================
 
 	if hook != nil {
-		log.Println("entering hook function ✅")
-		fmt.Println()
+		utils.BoxLog("entering hook function ✅")
 		if status, err := hook(c, &generatePayload, firewallConfig); err != nil {
 			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 	} else {
-		log.Println("no hook function provided ❌")
-		fmt.Println()
+		utils.BoxLog("no hook function provided ❌")
 	}
 
 	// ========================= Build Request =========================
-	log.Printf("building request 🏗️\n")
-	fmt.Println()
+	utils.BoxLog("building request 🏗️")
 
 	bodyProcessStart := time.Now()
 	requestData := generatePayload.ToMap()
@@ -144,7 +138,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	}
 
 	// Make the upstream request
-	log.Printf("making request to %s 🚀\n\n", targetURL)
+	utils.BoxLog(fmt.Sprintf("making request to %s 🚀", targetURL))
 	upstreamStart := time.Now()
 	resp, err := httpClient.Do(proxyReq)
 	if err != nil {

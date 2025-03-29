@@ -21,7 +21,6 @@ func Start() {
 	// Create model registry
 	registry := register.NewModelRegistry()
 
-	fmt.Println("Starting AI Model Proxy Server...")
 	// Load Internal Models
 	internal.LoadModels("models.yaml")
 
