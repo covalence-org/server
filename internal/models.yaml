@@ -1,4 +1,0 @@
-models:
-  - name: meta-llama/Prompt-Guard-86M
-    type: text-classification
-    api_url: https://localhost:8000/models/meta-llama/Prompt-Guard-86M/text/classification

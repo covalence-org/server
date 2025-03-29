@@ -1,0 +1,10 @@
+name: my_firewalls
+firewalls:
+  - enabled: true
+    type: prompt-injection
+    model: meta-llama/Prompt-Guard-86M
+    blocking_threshold: 0.8
+  - enabled: true
+    type: malicious-intent
+    model: meta-llama/Prompt-Guard-86M
+    blocking_threshold: 0.8
