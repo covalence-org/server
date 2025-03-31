@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"netrunner/src/db/postgres"
 	"netrunner/src/firewall"
 	"netrunner/src/internal"
 	"netrunner/src/register"
@@ -14,6 +16,8 @@ import (
 )
 
 func Start() {
+	ctx := context.Background()
+
 	// Set Gin to release mode for production
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
@@ -31,6 +35,14 @@ func Start() {
 		return
 	}
 
+	// Load Audit DB
+	// Connect to database
+	db, err := postgres.New(ctx, "user=alialh dbname=netrunner_dev sslmode=disable")
+	if err != nil {
+		log.Fatal("Database connection failed:", err)
+	}
+	defer db.Close()
+
 	// Create a custom HTTP client with connection pooling
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -43,12 +55,14 @@ func Start() {
 
 	// Model registration endpoint
 	r.POST("/model/register", func(c *gin.Context) {
-		router.RegisterModel(c, registry)
+		c.Set("registry", registry)
+		router.RegisterModel(c)
 	})
 
 	// List registered models endpoint
 	r.GET("/model/list", func(c *gin.Context) {
-		router.ListRegisteredModels(c, registry)
+		c.Set("registry", registry)
+		router.ListRegisteredModels(c)
 	})
 
 	// Health check endpoint
@@ -58,7 +72,11 @@ func Start() {
 
 	// Proxy endpoint - catch all requests
 	r.Any("/v1/*path", func(c *gin.Context) {
-		router.Generate(c, registry, httpClient, &firewallConfig, firewall.HookFirewalls)
+		c.Set("registry", registry)
+		c.Set("httpClient", httpClient)
+		c.Set("db", db)
+
+		router.Generate(c, &firewallConfig, firewall.HookFirewalls)
 	})
 
 	port := 8080
