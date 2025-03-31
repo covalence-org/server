@@ -11,8 +11,8 @@ import (
 )
 
 type Model struct {
-	Name   types.InternalModelName // Real model name to use with API
-	Type   types.InternalModelType
+	Model types.ModelID // Real model name to use with API
+	Type  types.InternalModelType
 }
 
 var (
@@ -29,8 +29,8 @@ func LoadModels(filePath string) {
 		}
 
 		var rawModels []struct {
-			Model  string `yaml:"model"`
-			Type   string `yaml:"type"`
+			Model string `yaml:"model"`
+			Type  string `yaml:"type"`
 		}
 
 		if err := yaml.Unmarshal(data, &rawModels); err != nil {
@@ -39,7 +39,7 @@ func LoadModels(filePath string) {
 
 		var parsedModels []Model
 		for _, rawModel := range rawModels {
-			name, err := types.NewInternalModelName(rawModel.Model)
+			model, err := types.NewModelID(rawModel.Model)
 			if err != nil {
 				log.Fatalf("failed to parse model: %v", err)
 				continue
@@ -52,8 +52,8 @@ func LoadModels(filePath string) {
 			}
 
 			parsedModels = append(parsedModels, Model{
-				Name:   name,
-				Type:   modelType,
+				Model: model,
+				Type:  modelType,
 			})
 		}
 
@@ -61,9 +61,9 @@ func LoadModels(filePath string) {
 	})
 }
 
-func CheckModelExists(model types.InternalModelName) bool {
+func CheckModelExists(model types.ModelID) bool {
 	for _, m := range models {
-		if m.Name == model {
+		if m.Model == model {
 			return true
 		}
 	}
@@ -76,9 +76,9 @@ func GetModels() []Model {
 }
 
 // GetModels returns the loaded models.
-func GetModel(model types.InternalModelName) (Model, error) {
+func GetModel(model types.ModelID) (Model, error) {
 	for _, m := range models {
-		if m.Name.String() == model.String() {
+		if m.Model == model {
 			return m, nil
 		}
 	}

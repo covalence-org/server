@@ -4,25 +4,6 @@ import (
 	"errors"
 )
 
-type InternalModelName struct {
-	raw string
-}
-
-func (s InternalModelName) Complete() bool {
-	return s.raw != ""
-}
-
-func (s InternalModelName) String() string {
-	return s.raw
-}
-
-func NewInternalModelName(value string) (InternalModelName, error) {
-	if value == "" {
-		return InternalModelName{}, errors.New("model cannot be empty")
-	}
-	return InternalModelName{value}, nil
-}
-
 // ======== Internal Model Types ==========
 
 type InternalModelType struct {

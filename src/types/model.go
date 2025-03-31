@@ -46,31 +46,31 @@ func NewName(value string) (Name, error) {
 	return Name{value}, nil
 }
 
-// ========================= ApiUrl =========================
+// ========================= APIURL =========================
 
-type ApiUrl struct {
+type APIURL struct {
 	raw string
 }
 
-func (s ApiUrl) Complete() bool {
+func (s APIURL) Complete() bool {
 	return s.raw != ""
 }
 
-func (s ApiUrl) String() string {
+func (s APIURL) String() string {
 	return s.raw
 }
 
-func isValidApiUrl(value string) bool {
-	parsedUrl, err := url.ParseRequestURI(value)
-	return err == nil && parsedUrl.Scheme != "" && parsedUrl.Host != ""
+func isValidAPIURL(value string) bool {
+	parsedURL, err := url.ParseRequestURI(value)
+	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
 }
 
-func NewApiUrl(value string) (ApiUrl, error) {
+func NewAPIURL(value string) (APIURL, error) {
 	if value == "" {
-		return ApiUrl{}, errors.New("ApiUrl cannot be empty")
+		return APIURL{}, errors.New("APIURL cannot be empty")
 	}
-	if !isValidApiUrl(value) {
-		return ApiUrl{}, fmt.Errorf("ApiUrl '%s' is invalid", value)
+	if !isValidAPIURL(value) {
+		return APIURL{}, fmt.Errorf("APIURL '%s' is invalid", value)
 	}
-	return ApiUrl{value}, nil
+	return APIURL{value}, nil
 }

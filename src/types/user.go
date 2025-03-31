@@ -4,21 +4,21 @@ import (
 	"errors"
 )
 
-type UserModel struct {
+type ModelID struct {
 	raw string
 }
 
-func (s UserModel) Complete() bool {
+func (s ModelID) Complete() bool {
 	return s.raw != ""
 }
 
-func (s UserModel) String() string {
+func (s ModelID) String() string {
 	return s.raw
 }
 
-func NewUserModel(value string) (UserModel, error) {
+func NewModelID(value string) (ModelID, error) {
 	if value == "" {
-		return UserModel{}, errors.New("Model cannot be empty")
+		return ModelID{}, errors.New("Model cannot be empty")
 	}
-	return UserModel{value}, nil
+	return ModelID{value}, nil
 }

@@ -6,18 +6,20 @@ import (
 	"netrunner/src/types"
 	"os"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
 type Firewall struct {
 	Enabled           bool
+	ID                uuid.UUID
 	Type              types.FirewallType
 	Model             internal.Model
 	BlockingThreshold float32
 }
 
 type Config struct {
-	Name string
+	Name      string
 	Firewalls []Firewall
 }
 
@@ -29,7 +31,7 @@ type rawFirewall struct {
 }
 
 type rawConfig struct {
-	Name string        `yaml:"name"`
+	Name      string        `yaml:"name"`
 	Firewalls []rawFirewall `yaml:"firewalls"`
 }
 
@@ -52,12 +54,12 @@ func LoadConfig(path string) (Config, error) {
 			return Config{}, fmt.Errorf("invalid firewall type: %w", err)
 		}
 
-		modelName, err := types.NewInternalModelName(rf.Model)
+		modelID, err := types.NewModelID(rf.Model)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid model name: %w", err)
+			return Config{}, fmt.Errorf("invalid model: %w", err)
 		}
 
-		model, err := internal.GetModel(modelName)
+		model, err := internal.GetModel(modelID)
 		if err != nil {
 			return Config{}, fmt.Errorf("failed to get model: %w", err)
 		}
