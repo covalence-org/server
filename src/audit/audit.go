@@ -5,21 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"netrunner/src/db/postgres"
+	"netrunner/src/db/postgres/sqlc"
 )
-
-// Store handles database operations with a simplified interface
-type Store struct {
-	pool    *pgxpool.Pool
-	queries *postgres.Queries
-	mu      sync.Mutex
-}
 
 // Trace represents a full request trace with all related data
 type Trace struct {
@@ -45,40 +37,21 @@ type FirewallEvent struct {
 	RiskScore     float64
 }
 
-// New creates a database store with connection pooling
-func New(ctx context.Context, connString string) (*Store, error) {
-	pool, err := pgxpool.New(ctx, connString)
-	if err != nil {
-		return nil, fmt.Errorf("database connection failed: %w", err)
-	}
-
-	// Test connection
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("database ping failed: %w", err)
-	}
-
-	return &Store{
-		pool:    pool,
-		queries: postgres.New(pool),
-	}, nil
-}
-
 type Request struct {
 	UserID     string
 	APIKeyID   string
 	Model      string
-	Endpoint   string
+	TargetURL  string
 	Messages   []map[string]interface{}
 	Parameters map[string]interface{}
 	ClientIP   string
 }
 
 // LogRequest creates a request log entry
-func (s *Store) LogRequest(ctx context.Context, r Request) (string, error) {
+func LogRequest(ctx context.Context, r Request, db *postgres.DB) (string, error) {
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	db.Mu.Lock()
+	defer db.Mu.Unlock()
 
 	// Messages parameters to JSON
 	// Convert each message to JSON and store in a list
@@ -113,11 +86,11 @@ func (s *Store) LogRequest(ctx context.Context, r Request) (string, error) {
 	apiKeyUUID.Scan(r.APIKeyID)
 
 	// Execute insert
-	req, err := s.queries.InsertRequestLog(ctx, postgres.InsertRequestLogParams{
+	req, err := db.Queries.InsertRequestLog(ctx, sqlc.InsertRequestLogParams{
 		UserID:     userUUID,
 		ApiKeyID:   apiKeyUUID,
 		Model:      r.Model,
-		Endpoint:   r.Endpoint,
+		TargetUrl:  r.TargetURL,
 		Messages:   messageBytesList,
 		Parameters: paramsBytes,
 		ClientIp:   clientIP,
@@ -140,10 +113,10 @@ type Response struct {
 }
 
 // LogResponse records a response to an existing request
-func (s *Store) LogResponse(ctx context.Context, r Response) error {
+func LogResponse(ctx context.Context, r Response, db *postgres.DB) error {
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	db.Mu.Lock()
+	defer db.Mu.Unlock()
 
 	var reqUUID pgtype.UUID
 	reqUUID.Scan(r.RequestID)
@@ -154,7 +127,7 @@ func (s *Store) LogResponse(ctx context.Context, r Response) error {
 	pgOutput.Scan(r.OutputTokens)
 	pgTotal.Scan(r.TotalTokens)
 
-	_, err := s.queries.InsertResponseLog(ctx, postgres.InsertResponseLogParams{
+	_, err := db.Queries.InsertResponseLog(ctx, sqlc.InsertResponseLogParams{
 		RequestID:    reqUUID,
 		Response:     r.Response,
 		LatencyMs:    pgLatency,
@@ -167,10 +140,10 @@ func (s *Store) LogResponse(ctx context.Context, r Response) error {
 }
 
 // LogFirewall records a firewall event for a request
-func (s *Store) LogFirewallEvent(ctx context.Context, fe FirewallEvent) error {
+func LogFirewallEvent(ctx context.Context, fe FirewallEvent, db *postgres.DB) error {
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	db.Mu.Lock()
+	defer db.Mu.Unlock()
 
 	// Convert request ID
 	var reqUUID pgtype.UUID
@@ -197,7 +170,7 @@ func (s *Store) LogFirewallEvent(ctx context.Context, fe FirewallEvent) error {
 		return fmt.Errorf("invalid risk score: %w", err)
 	}
 
-	_, err = s.queries.InsertFirewallEvent(ctx, postgres.InsertFirewallEventParams{
+	_, err = db.Queries.InsertFirewallEvent(ctx, sqlc.InsertFirewallEventParams{
 		RequestID:     reqUUID,
 		FirewallID:    fe.FirewallID,
 		FirewallType:  fe.FirewallType,
@@ -210,14 +183,14 @@ func (s *Store) LogFirewallEvent(ctx context.Context, fe FirewallEvent) error {
 }
 
 // GetTrace retrieves the full trace for a request
-func (s *Store) GetTrace(ctx context.Context, requestID string) (Trace, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func GetTrace(ctx context.Context, requestID string, db *postgres.DB) (Trace, error) {
+	db.Mu.Lock()
+	defer db.Mu.Unlock()
 
 	var reqUUID pgtype.UUID
 	reqUUID.Scan(requestID)
 
-	rows, err := s.queries.GetRequestFullTrace(ctx, reqUUID)
+	rows, err := db.Queries.GetRequestFullTrace(ctx, reqUUID)
 	if err != nil {
 		return Trace{}, err
 	}
@@ -294,11 +267,6 @@ func (s *Store) GetTrace(ctx context.Context, requestID string) (Trace, error) {
 	trace.FirewallInfo = events
 
 	return trace, nil
-}
-
-// Close closes the database connection pool
-func (s *Store) Close() {
-	s.pool.Close()
 }
 
 // NewUUID generates a new UUID string

@@ -2,6 +2,7 @@ package request
 
 import (
 	"errors"
+	"net/url"
 	"netrunner/src/types"
 	"netrunner/src/user"
 	"time"
@@ -33,7 +34,8 @@ func ParseRegister(c *gin.Context) (user.Model, error) {
 		return user.Model{}, errors.New("invalid model")
 	}
 
-	apiURL, err := types.NewAPIURL(r.APIURL)
+	// Build target URL
+	apiURL, err := url.Parse(r.APIURL)
 	if err != nil {
 		return user.Model{}, errors.New("invalid api url")
 	}

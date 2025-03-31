@@ -10,7 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterModel(c *gin.Context, r *register.Registry) {
+func RegisterModel(c *gin.Context) {
+
+	r := c.MustGet("registry").(*register.Registry)
 
 	// Parse Request
 	modelInfo, err := request.ParseRegister(c)
@@ -25,7 +27,9 @@ func RegisterModel(c *gin.Context, r *register.Registry) {
 	c.JSON(http.StatusOK, gin.H{"status": "model registered", "name": modelInfo.Name.String(), "model": modelInfo.Model.String()})
 }
 
-func ListRegisteredModels(c *gin.Context, r *register.Registry) {
+func ListRegisteredModels(c *gin.Context) {
+	r := c.MustGet("registry").(*register.Registry)
+
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 

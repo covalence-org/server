@@ -6,17 +6,18 @@ import (
 	"log"
 
 	"netrunner/src/audit"
+	"netrunner/src/db/postgres"
 )
 
 func main() {
 	ctx := context.Background()
 
 	// Connect to database
-	store, err := audit.New(ctx, "user=alialh dbname=netrunner_dev sslmode=disable")
+	db, err := postgres.New(ctx, "user=alialh dbname=netrunner_dev sslmode=disable")
 	if err != nil {
 		log.Fatal("Database connection failed:", err)
 	}
-	defer store.Close()
+	defer db.Close()
 
 	// Generate UUIDs
 	userID := audit.NewUUID()
@@ -26,14 +27,14 @@ func main() {
 		UserID:     userID,
 		APIKeyID:   apiKeyID,
 		Model:      "gpt-4",
-		Endpoint:   "/v1/chat/completions",
+		TargetURL:  "https://api.openai.com/v1/chat/completions",
 		Messages:   []map[string]interface{}{{"role": "user", "content": "Tell me something cool"}},
 		Parameters: map[string]interface{}{"temperature": 0.7},
 		ClientIP:   "127.0.0.1",
 	}
 
 	// Log a request
-	requestID, err := store.LogRequest(ctx, request)
+	requestID, err := audit.LogRequest(ctx, request, db)
 	if err != nil {
 		log.Fatal("Failed to log request:", err)
 	}
@@ -48,7 +49,7 @@ func main() {
 		TotalTokens:  20,
 	}
 	// Log a response
-	err = store.LogResponse(ctx, response)
+	err = audit.LogResponse(ctx, response, db)
 	if err != nil {
 		log.Fatal("Failed to log response:", err)
 	}
@@ -64,14 +65,14 @@ func main() {
 	}
 
 	// Log a firewall event
-	err = store.LogFirewallEvent(ctx, firewallEvent)
+	err = audit.LogFirewallEvent(ctx, firewallEvent, db)
 	if err != nil {
 		log.Fatal("Failed to log firewall event:", err)
 	}
 	fmt.Println("Firewall event logged")
 
 	// Get trace
-	trace, err := store.GetTrace(ctx, requestID)
+	trace, err := audit.GetTrace(ctx, requestID, db)
 	if err != nil {
 		log.Fatal("Failed to get trace:", err)
 	}

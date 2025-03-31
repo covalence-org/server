@@ -1,6 +1,7 @@
 package user
 
 import (
+	"net/url"
 	"netrunner/src/types"
 	"time"
 )
@@ -10,6 +11,6 @@ import (
 type Model struct {
 	Name      types.Name    // User-provided name
 	Model     types.ModelID // Real model name to use with API
-	APIURL    types.APIURL  // URL to forward the request to
+	APIURL    *url.URL
 	CreatedAt time.Time
 }

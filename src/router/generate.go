@@ -7,19 +7,23 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
+	"netrunner/src/audit"
+	"netrunner/src/db/postgres"
 	"netrunner/src/firewall"
 	"netrunner/src/register"
 	"netrunner/src/request"
 	"netrunner/src/utils"
-	"path"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, firewallConfig *firewall.Config, hook func(*gin.Context, *request.Generate, *firewall.Config) (int, error)) {
+func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Context, *request.Generate, *firewall.Config) (int, error)) {
+
+	registry := c.MustGet("registry").(*register.Registry)
+	httpClient := c.MustGet("httpClient").(*http.Client)
+	db := c.MustGet("db").(*postgres.DB)
 
 	// ========================= Request Metrics =========================
 
@@ -58,6 +62,13 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 		return
 	}
 
+	utils.BoxLog("audit loggging: request")
+
+	auditRequest := generateRequest.ToAuditRequest()
+	audit.LogRequest(c.Request.Context(), auditRequest, db)
+
+	// ========================= Init Metrics =========================
+
 	metrics.ModelLookupTime = time.Since(modelLookupStart)
 	metrics.Name = generateRequest.Model.Name
 	metrics.Model = generateRequest.Model.Model
@@ -86,25 +97,12 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	}
 	metrics.RequestBodyTime = time.Since(bodyProcessStart)
 
-	// Build target URL
-	u, err := url.Parse(generateRequest.Model.APIURL.String())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "server configuration error"})
-		return
-	}
-
-	u.Path = path.Join(u.Path, c.Param("path"))
-
-	// Preserve query parameters
-	u.RawQuery = c.Request.URL.RawQuery
-	targetURL := u.String()
-
 	// Create context for the request
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 55*time.Second)
 	defer cancel()
 
 	// Create and send the proxied request
-	proxyReq, err := http.NewRequestWithContext(ctx, c.Request.Method, targetURL, strings.NewReader(string(modifiedRequestBody)))
+	proxyReq, err := http.NewRequestWithContext(ctx, c.Request.Method, generateRequest.TargetURL.String(), strings.NewReader(string(modifiedRequestBody)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create request"})
 		return
@@ -128,7 +126,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	}
 
 	// Make the upstream request
-	utils.BoxLog(fmt.Sprintf("making request to %s 🚀", targetURL))
+	utils.BoxLog(fmt.Sprintf("making request to %s 🚀", generateRequest.TargetURL.String()))
 	upstreamStart := time.Now()
 	resp, err := httpClient.Do(proxyReq)
 	if err != nil {
