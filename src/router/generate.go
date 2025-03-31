@@ -12,7 +12,6 @@ import (
 	"netrunner/src/register"
 	"netrunner/src/request"
 	"netrunner/src/utils"
-	"netrunner/src/user"
 	"path"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, firewallConfig *firewall.Config, hook func(*gin.Context, *user.GeneratePayload, *firewall.Config) (int, error)) {
+func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Client, firewallConfig *firewall.Config, hook func(*gin.Context, *request.Generate, *firewall.Config) (int, error)) {
 
 	// ========================= Request Metrics =========================
 
@@ -51,8 +50,8 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	// ========================= Read Request =========================
 	utils.BoxLog(fmt.Sprintf("reading request made to %s 🚀", c.Param("path")))
 
-	var generateRequest request.GenerateRequest
-	if err := c.ShouldBindJSON(&generateRequest); err != nil {
+	var generateRequestRaw request.RawGenerate
+	if err := c.ShouldBindJSON(&generateRequestRaw); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -62,21 +61,21 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 
 	modelLookupStart := time.Now()
 
-	generatePayload, err := request.ParseGenerateRequest(generateRequest, registry)
+	generateRequest, err := generateRequestRaw.Parse(registry)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	metrics.ModelLookupTime = time.Since(modelLookupStart)
-	metrics.Name = generatePayload.Model.Name
-	metrics.Model = generatePayload.Model.Model
+	metrics.Name = generateRequest.Model.Name
+	metrics.Model = generateRequest.Model.Model
 
 	// ========================= Run Hook ===========================
 
 	if hook != nil {
 		utils.BoxLog("entering hook function ✅")
-		if status, err := hook(c, &generatePayload, firewallConfig); err != nil {
+		if status, err := hook(c, &generateRequest, firewallConfig); err != nil {
 			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
@@ -88,7 +87,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	utils.BoxLog("building request 🏗️")
 
 	bodyProcessStart := time.Now()
-	requestData := generatePayload.ToMap()
+	requestData := generateRequest.ToMap()
 	modifiedRequestBody, err := json.Marshal(requestData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request to json"})
@@ -97,7 +96,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	metrics.RequestBodyTime = time.Since(bodyProcessStart)
 
 	// Build target URL
-	u, err := url.Parse(generatePayload.Model.ApiUrl.String())
+	u, err := url.Parse(generateRequest.Model.APIURL.String())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server configuration error"})
 		return
@@ -147,7 +146,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	}
 	metrics.UpstreamLatency = time.Since(upstreamStart)
 	metrics.StatusCode = resp.StatusCode
-	metrics.StreamingResponse = generatePayload.IsStreaming
+	metrics.StreamingResponse = generateRequest.IsStreaming
 
 	// Copy response headers
 	for key, values := range resp.Header {
@@ -160,7 +159,7 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 	c.Writer.WriteHeader(resp.StatusCode)
 
 	// Stream or copy the response body
-	if generatePayload.IsStreaming {
+	if generateRequest.IsStreaming {
 		// For streaming responses, we need to flush after each write
 		flusher, ok := c.Writer.(http.Flusher)
 		if !ok {

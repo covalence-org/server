@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"net/http"
 	"log"
+	"net/http"
 	"netrunner/src/internal"
 	"netrunner/src/types"
 )
@@ -24,7 +24,7 @@ type Request struct {
 type Response struct {
 	Probabilities []float32 `json:"probabilities"`
 	Labels        []string  `json:"labels"`
-	ModelId       string    `json:"model_id"`
+	ModelID       string    `json:"model_id"`
 }
 
 func NewRequest(model internal.Model, text string) (Request, error) {
@@ -37,7 +37,7 @@ func NewRequest(model internal.Model, text string) (Request, error) {
 func (m Request) ToMap() map[string]interface{} {
 	// Start with required parameters
 	requestMap := map[string]interface{}{
-		"model": m.Model.Name.String(),
+		"model": m.Model.Model.String(),
 		"text":  m.Text,
 	}
 

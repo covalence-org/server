@@ -13,9 +13,9 @@ import (
 	promptInjection "netrunner/src/firewall/prompt_injection"
 	sensitiveData "netrunner/src/firewall/sensitive_data"
 	spam "netrunner/src/firewall/spam"
+	"netrunner/src/request"
 
 	"netrunner/src/types"
-	"netrunner/src/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,7 +49,7 @@ func (f Firewall) Apply(messages []types.Message) (bool, error) {
 	return true, nil
 }
 
-func HookFirewalls(c *gin.Context, payload *user.GeneratePayload, config *Config) (int, error) {
+func HookFirewalls(c *gin.Context, payload *request.Generate, config *Config) (int, error) {
 	log.Printf("firewall hook called with payload")
 
 	// Check latest message

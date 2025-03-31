@@ -12,14 +12,15 @@ import (
 
 func RegisterModel(c *gin.Context, r *register.Registry) {
 
-	modelInfo, err := request.ParseRegisterRequest(c)
+	// Parse Request
+	modelInfo, err := request.ParseRegister(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	r.Register(modelInfo)
-	log.Printf("Model registered: %s -> %s at %s", modelInfo.Name.String(), modelInfo.Model.String(), modelInfo.ApiUrl.String())
+	log.Printf("Model registered: %s -> %s at %s", modelInfo.Name.String(), modelInfo.Model.String(), modelInfo.APIURL.String())
 
 	c.JSON(http.StatusOK, gin.H{"status": "model registered", "name": modelInfo.Name.String(), "model": modelInfo.Model.String()})
 }

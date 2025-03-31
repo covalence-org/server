@@ -10,38 +10,38 @@ import (
 )
 
 // ModelInfo stores information about a registered model
-type RegisterRequest struct {
+type rawRegister struct {
 	Name   string `json:"name" binding:"required"`
 	Model  string `json:"model" binding:"required"`
-	ApiUrl string `json:"api_url" binding:"required"`
+	APIURL string `json:"api_url" binding:"required"`
 }
 
-func ParseRegisterRequest(raw *gin.Context) (user.Model, error) {
+func ParseRegister(c *gin.Context) (user.Model, error) {
 
-	var payload RegisterRequest
-	if err := raw.ShouldBindJSON(&payload); err != nil {
-		return user.Model{}, errors.New("invalid request format")
+	var r rawRegister
+	if err := c.ShouldBindJSON(&r); err != nil {
+		return user.Model{}, err
 	}
 
-	name, err := types.NewName(payload.Name)
+	name, err := types.NewName(r.Name)
 	if err != nil {
 		return user.Model{}, errors.New("invalid name")
 	}
 
-	modelName, err := types.NewUserModel(payload.Model)
+	modelID, err := types.NewModelID(r.Model)
 	if err != nil {
 		return user.Model{}, errors.New("invalid model")
 	}
 
-	apiUrl, err := types.NewApiUrl(payload.ApiUrl)
+	apiURL, err := types.NewAPIURL(r.APIURL)
 	if err != nil {
 		return user.Model{}, errors.New("invalid api url")
 	}
 
 	return user.Model{
 		Name:      name,
-		Model:     modelName,
-		ApiUrl:    apiUrl,
+		Model:     modelID,
+		APIURL:    apiURL,
 		CreatedAt: time.Now(),
 	}, nil
 
