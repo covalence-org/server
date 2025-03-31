@@ -8,7 +8,7 @@ CREATE TABLE request_logs (
     user_id UUID NOT NULL,
     api_key_id UUID,
     model TEXT NOT NULL,
-    endpoint TEXT NOT NULL,
+    target_url TEXT NOT NULL,
     messages JSONB[] NOT NULL,
     parameters JSONB,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now(),

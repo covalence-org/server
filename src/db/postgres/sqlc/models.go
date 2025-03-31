@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.28.0
 
-package postgres
+package sqlc
 
 import (
 	"net/netip"
@@ -34,7 +34,7 @@ type RequestLog struct {
 	UserID     pgtype.UUID
 	ApiKeyID   pgtype.UUID
 	Model      string
-	Endpoint   string
+	TargetUrl  string
 	Messages   [][]byte
 	Parameters []byte
 	ReceivedAt pgtype.Timestamptz

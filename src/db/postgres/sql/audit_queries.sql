@@ -1,6 +1,6 @@
 -- name: InsertRequestLog :one
 INSERT INTO request_logs (
-  user_id, api_key_id, model, endpoint, messages, parameters, client_ip
+  user_id, api_key_id, model, target_url, messages, parameters, client_ip
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
