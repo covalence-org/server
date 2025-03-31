@@ -47,21 +47,12 @@ func Generate(c *gin.Context, registry *register.Registry, httpClient *http.Clie
 		utils.BoxLog(fmt.Sprintf("request_metrics: %s", logData))
 	}()
 
-	// ========================= Read Request =========================
-	utils.BoxLog(fmt.Sprintf("reading request made to %s 🚀", c.Param("path")))
-
-	var generateRequestRaw request.RawGenerate
-	if err := c.ShouldBindJSON(&generateRequestRaw); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// ========================= Parse Request =========================
-	utils.BoxLog("parsing request 🔍")
+	// ========================= Read & Parse Request =========================
+	utils.BoxLog(fmt.Sprintf("reading & parsing request made to %s 🚀", c.Param("path")))
 
 	modelLookupStart := time.Now()
 
-	generateRequest, err := generateRequestRaw.Parse(registry)
+	generateRequest, err := request.ParseGenerate(c, registry)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
