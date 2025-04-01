@@ -1,15 +1,15 @@
 -- name: InsertRequestLog :one
 INSERT INTO request_logs (
-  user_id, api_key_id, model, target_url, messages, parameters, client_ip
+  user_id, api_key_id, model, target_url, inputs, parameters, client_ip
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: InsertResponseLog :one
 INSERT INTO response_logs (
-  request_id, response, latency_ms, input_tokens, output_tokens, total_tokens
+  request_id, response, latency_ms
 )
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: InsertFirewallEvent :one

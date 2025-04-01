@@ -52,6 +52,7 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 	}()
 
 	// ========================= Read & Parse Request =========================
+
 	utils.BoxLog(fmt.Sprintf("reading & parsing request made to %s 🚀", c.Param("path")))
 
 	modelLookupStart := time.Now()
@@ -62,10 +63,19 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 		return
 	}
 
-	utils.BoxLog("audit loggging: request")
+	// ========================= Audit: Log Request =========================
+
+	utils.BoxLog("audit loggging: request 📝")
 
 	auditRequest := generateRequest.ToAuditRequest()
-	audit.LogRequest(c.Request.Context(), auditRequest, db)
+	requestID, err := audit.LogRequest(c.Request.Context(), auditRequest, db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to log request"})
+		return
+	}
+
+	// Set RequestID
+	c.Set("requestID", requestID)
 
 	// ========================= Init Metrics =========================
 
@@ -148,12 +158,14 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 	c.Writer.WriteHeader(resp.StatusCode)
 
 	// Stream or copy the response body
+	var responseBody []byte
 	if generateRequest.IsStreaming {
 		// For streaming responses, we need to flush after each write
 		flusher, ok := c.Writer.(http.Flusher)
 		if !ok {
 			log.Println("streaming requested but responsewriter doesn't support flush")
-			io.Copy(c.Writer, resp.Body)
+			responseBody, _ = io.ReadAll(resp.Body)
+			c.Writer.Write(responseBody)
 		} else {
 			// Create a buffer for efficient reading
 			buf := make([]byte, 1024)
@@ -162,6 +174,7 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 				if n > 0 {
 					c.Writer.Write(buf[:n])
 					flusher.Flush()
+					responseBody = append(responseBody, buf[:n]...)
 				}
 
 				if err != nil {
@@ -171,7 +184,32 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 		}
 	} else {
 		// For non-streaming, just copy the entire response
-		io.Copy(c.Writer, resp.Body)
+		responseBody, _ = io.ReadAll(resp.Body)
+		// Log the response body for debugging purposes
+		utils.BoxLog(fmt.Sprintf("response body: %s", string(responseBody)))
+	}
+
+	var response map[string]interface{}
+	err = json.Unmarshal(responseBody, &response)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "response couldn't be parsed"})
+		return
+	}
+
+	// Log the response body for debugging purposes
+	utils.BoxLog(fmt.Sprintf("response body: %v", response))
+
+	// Audit log response
+	utils.BoxLog("audit loggging: response 📝")
+	auditResponse := audit.Response{
+		RequestID: requestID,
+		Response:  response,
+		LatencyMs: metrics.UpstreamLatency.Milliseconds(),
+	}
+	err = audit.LogResponse(c.Request.Context(), auditResponse, db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to log response"})
+		return
 	}
 
 	resp.Body.Close()

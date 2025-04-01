@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-
 	"netrunner/src/audit"
 	"netrunner/src/db/postgres"
 )
 
 func main() {
+	// fmt.Println(uuid.New())
 	ctx := context.Background()
 
 	// Connect to database
@@ -28,7 +28,7 @@ func main() {
 		APIKeyID:   apiKeyID,
 		Model:      "gpt-4",
 		TargetURL:  "https://api.openai.com/v1/chat/completions",
-		Messages:   []map[string]interface{}{{"role": "user", "content": "Tell me something cool"}},
+		Inputs:     []map[string]interface{}{{"role": "user", "content": "Tell me something cool"}},
 		Parameters: map[string]interface{}{"temperature": 0.7},
 		ClientIP:   "127.0.0.1",
 	}
@@ -41,12 +41,9 @@ func main() {
 	fmt.Println("Request logged:", requestID)
 
 	response := audit.Response{
-		RequestID:    requestID,
-		Response:     "Here's something cool: Fire is hot.",
-		LatencyMs:    150,
-		InputTokens:  8,
-		OutputTokens: 12,
-		TotalTokens:  20,
+		RequestID: requestID,
+		Response:  map[string]interface{}{"content": "Here's something cool: Fire is hot.", "metrics": map[string]interface{}{"input_tokens": 8, "output_tokens": 12, "total_tokens": 20}},
+		LatencyMs: 150,
 	}
 	// Log a response
 	err = audit.LogResponse(ctx, response, db)
@@ -81,7 +78,7 @@ func main() {
 	fmt.Println("\nRequest Trace:")
 	fmt.Printf("ID: %s\n", trace.RequestID)
 	fmt.Printf("Model: %s\n", trace.Model)
-	fmt.Printf("Messages: %v\n", trace.Messages)
+	fmt.Printf("Inputs: %v\n", trace.Inputs)
 	fmt.Printf("Response: %s\n", trace.Response)
 
 	if len(trace.FirewallInfo) > 0 {

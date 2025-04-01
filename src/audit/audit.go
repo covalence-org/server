@@ -15,17 +15,17 @@ import (
 
 // Trace represents a full request trace with all related data
 type Trace struct {
-	RequestID     string
-	UserID        string
-	Model         string
-	Messages      []map[string]interface{}
-	Response      string
-	Parameters    map[string]interface{}
-	FirewallInfo  []FirewallEvent
-	ClientIP      string
-	RiskScore     float64
-	Blocked       bool
-	BlockedReason string
+	RequestID         string
+	UserID            string
+	Model             string
+	Inputs            []map[string]interface{}
+	Response          map[string]interface{}
+	RequestParameters map[string]interface{}
+	FirewallInfo      []FirewallEvent
+	ClientIP          string
+	RiskScore         float64
+	Blocked           bool
+	BlockedReason     string
 }
 
 type FirewallEvent struct {
@@ -42,7 +42,7 @@ type Request struct {
 	APIKeyID   string
 	Model      string
 	TargetURL  string
-	Messages   []map[string]interface{}
+	Inputs     []map[string]interface{}
 	Parameters map[string]interface{}
 	ClientIP   string
 }
@@ -55,13 +55,13 @@ func LogRequest(ctx context.Context, r Request, db *postgres.DB) (string, error)
 
 	// Messages parameters to JSON
 	// Convert each message to JSON and store in a list
-	var messageBytesList [][]byte
-	for _, message := range r.Messages {
-		messageBytes, err := json.Marshal(message)
+	var inputBytesList [][]byte
+	for _, input := range r.Inputs {
+		inputBytes, err := json.Marshal(input)
 		if err != nil {
 			return "", fmt.Errorf("invalid messages: %w", err)
 		}
-		messageBytesList = append(messageBytesList, messageBytes)
+		inputBytesList = append(inputBytesList, inputBytes)
 	}
 
 	// Convert parameters to JSON
@@ -91,7 +91,7 @@ func LogRequest(ctx context.Context, r Request, db *postgres.DB) (string, error)
 		ApiKeyID:   apiKeyUUID,
 		Model:      r.Model,
 		TargetUrl:  r.TargetURL,
-		Messages:   messageBytesList,
+		Inputs:     inputBytesList,
 		Parameters: paramsBytes,
 		ClientIp:   clientIP,
 	})
@@ -104,12 +104,9 @@ func LogRequest(ctx context.Context, r Request, db *postgres.DB) (string, error)
 }
 
 type Response struct {
-	RequestID    string
-	Response     string
-	LatencyMs    int
-	InputTokens  int
-	OutputTokens int
-	TotalTokens  int
+	RequestID string
+	Response  map[string]interface{}
+	LatencyMs int64
 }
 
 // LogResponse records a response to an existing request
@@ -121,19 +118,19 @@ func LogResponse(ctx context.Context, r Response, db *postgres.DB) error {
 	var reqUUID pgtype.UUID
 	reqUUID.Scan(r.RequestID)
 
-	var pgLatency, pgInput, pgOutput, pgTotal pgtype.Int4
+	var pgLatency pgtype.Int4
 	pgLatency.Scan(r.LatencyMs)
-	pgInput.Scan(r.InputTokens)
-	pgOutput.Scan(r.OutputTokens)
-	pgTotal.Scan(r.TotalTokens)
 
-	_, err := db.Queries.InsertResponseLog(ctx, sqlc.InsertResponseLogParams{
-		RequestID:    reqUUID,
-		Response:     r.Response,
-		LatencyMs:    pgLatency,
-		InputTokens:  pgInput,
-		OutputTokens: pgOutput,
-		TotalTokens:  pgTotal,
+	// Turn Parameters into bytes json
+	responseBytes, err := json.Marshal(r.Response)
+	if err != nil {
+		return fmt.Errorf("invalid response: %w", err)
+	}
+
+	_, err = db.Queries.InsertResponseLog(ctx, sqlc.InsertResponseLogParams{
+		RequestID: reqUUID,
+		Response:  responseBytes,
+		LatencyMs: pgLatency,
 	})
 
 	return err
@@ -207,27 +204,33 @@ func GetTrace(ctx context.Context, requestID string, db *postgres.DB) (Trace, er
 	json.Unmarshal(row.Parameters, &params) // Ignoring error, empty map is fine
 
 	// Parse parameters
-	var messages []map[string]interface{}
-	for _, message := range row.Messages {
+	var inputs []map[string]interface{}
+	for _, input := range row.Inputs {
 		var msg map[string]interface{}
-		err := json.Unmarshal(message, &msg)
+		err := json.Unmarshal(input, &msg)
 		if err != nil {
 			return Trace{}, fmt.Errorf("invalid messages: %w", err)
 		}
-		messages = append(messages, msg)
+		inputs = append(inputs, msg)
+	}
+
+	var response map[string]interface{}
+	err = json.Unmarshal(row.Response, &response)
+	if err != nil {
+		return Trace{}, fmt.Errorf("invalid response: %w", err)
 	}
 
 	trace := Trace{
-		RequestID:     row.RequestID.String(),
-		UserID:        row.UserID.String(),
-		Model:         row.Model,
-		Messages:      messages,
-		Response:      row.Response.String,
-		Parameters:    params,
-		ClientIP:      "", // Will be populated if client IP exists
-		RiskScore:     0,  // Will be populated if risk score exists
-		Blocked:       row.Blocked.Bool,
-		BlockedReason: row.BlockedReason.String,
+		RequestID:         row.RequestID.String(),
+		UserID:            row.UserID.String(),
+		Model:             row.Model,
+		Inputs:            inputs,
+		Response:          response,
+		RequestParameters: params,
+		ClientIP:          "", // Will be populated if client IP exists
+		RiskScore:         0,  // Will be populated if risk score exists
+		Blocked:           row.Blocked.Bool,
+		BlockedReason:     row.BlockedReason.String,
 	}
 
 	// Add optional fields if they exist

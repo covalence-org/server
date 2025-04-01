@@ -2,9 +2,12 @@ package firewall
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
+	"netrunner/src/audit"
+	"netrunner/src/db/postgres"
 	custom "netrunner/src/firewall/custom"
 	hallucinationRisk "netrunner/src/firewall/hallucination_risk"
 	maliciousIntent "netrunner/src/firewall/malicious_intent"
@@ -14,6 +17,7 @@ import (
 	sensitiveData "netrunner/src/firewall/sensitive_data"
 	spam "netrunner/src/firewall/spam"
 	"netrunner/src/request"
+	"netrunner/src/utils"
 
 	"netrunner/src/types"
 
@@ -51,6 +55,8 @@ func (f Firewall) Apply(messages []types.Message) (bool, error) {
 
 func HookFirewalls(c *gin.Context, payload *request.Generate, config *Config) (int, error) {
 	log.Printf("firewall hook called with payload")
+	db := c.MustGet("db").(*postgres.DB)
+	requestID := c.MustGet("requestID").(string)
 
 	// Check latest message
 	for _, firewall := range config.Firewalls {
@@ -58,6 +64,20 @@ func HookFirewalls(c *gin.Context, payload *request.Generate, config *Config) (i
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
+
+		// Log the firewall event
+		utils.BoxLog(fmt.Sprintf("audit loggging: firewall event %s 📝", firewall.Type.String()))
+
+		fe := audit.FirewallEvent{
+			RequestID:     requestID,
+			FirewallID:    firewall.ID.String(),
+			FirewallType:  firewall.Type.String(),
+			Blocked:       !res,
+			BlockedReason: "",
+			RiskScore:     0.0,
+		}
+
+		audit.LogFirewallEvent(c, fe, db)
 
 		if !res {
 			return http.StatusForbidden, errors.New("request rejected: blocked by firewall")
