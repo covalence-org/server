@@ -7,6 +7,6 @@ sql:
       - "postgres/sql/audit_schema.sql"
     gen:
       go:
-        package: "postgres"
-        out: "postgres"
+        package: "sqlc"
+        out: "postgres/sqlc"
         sql_package: "pgx/v5"

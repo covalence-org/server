@@ -9,7 +9,7 @@ CREATE TABLE request_logs (
     api_key_id UUID,
     model TEXT NOT NULL,
     target_url TEXT NOT NULL,
-    messages JSONB[] NOT NULL,
+    inputs JSONB[] NOT NULL,
     parameters JSONB,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     client_ip INET,
@@ -19,12 +19,9 @@ CREATE TABLE request_logs (
 CREATE TABLE response_logs (
     response_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID REFERENCES request_logs(request_id) ON DELETE CASCADE,
-    response TEXT NOT NULL,
+    response JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    latency_ms INTEGER,
-    input_tokens INTEGER,
-    output_tokens INTEGER,
-    total_tokens INTEGER
+    latency_ms INTEGER
 );
 
 CREATE TABLE firewall_events (

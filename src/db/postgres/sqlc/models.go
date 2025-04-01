@@ -35,7 +35,7 @@ type RequestLog struct {
 	ApiKeyID   pgtype.UUID
 	Model      string
 	TargetUrl  string
-	Messages   [][]byte
+	Inputs     [][]byte
 	Parameters []byte
 	ReceivedAt pgtype.Timestamptz
 	ClientIp   *netip.Addr
@@ -43,12 +43,9 @@ type RequestLog struct {
 }
 
 type ResponseLog struct {
-	ResponseID   pgtype.UUID
-	RequestID    pgtype.UUID
-	Response     string
-	CreatedAt    pgtype.Timestamptz
-	LatencyMs    pgtype.Int4
-	InputTokens  pgtype.Int4
-	OutputTokens pgtype.Int4
-	TotalTokens  pgtype.Int4
+	ResponseID pgtype.UUID
+	RequestID  pgtype.UUID
+	Response   []byte
+	CreatedAt  pgtype.Timestamptz
+	LatencyMs  pgtype.Int4
 }

@@ -1,10 +1,12 @@
 name: my_firewalls
 firewalls:
-  - enabled: true
+  - id: 8de93749-aa81-4cba-8cdd-f138aa10fcd1
+    enabled: true
     type: prompt-injection
     model: meta-llama/Prompt-Guard-86M
     blocking_threshold: 0.8
-  - enabled: true
+  - id: 9c260ea0-48ce-455c-baa0-9bf7fef82390
+    enabled: true
     type: malicious-intent
     model: meta-llama/Prompt-Guard-86M
     blocking_threshold: 0.8

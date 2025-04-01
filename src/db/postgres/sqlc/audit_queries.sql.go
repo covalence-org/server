@@ -13,7 +13,7 @@ import (
 )
 
 const getRequestFullTrace = `-- name: GetRequestFullTrace :many
-SELECT rl.request_id, rl.user_id, rl.api_key_id, rl.model, rl.target_url, rl.messages, rl.parameters, rl.received_at, rl.client_ip, rl.archived, res.response, res.latency_ms, pe.firewall_event_id, pe.request_id, pe.firewall_id, pe.firewall_type, pe.blocked, pe.blocked_reason, pe.risk_score, pe.evaluated_at
+SELECT rl.request_id, rl.user_id, rl.api_key_id, rl.model, rl.target_url, rl.inputs, rl.parameters, rl.received_at, rl.client_ip, rl.archived, res.response, res.latency_ms, pe.firewall_event_id, pe.request_id, pe.firewall_id, pe.firewall_type, pe.blocked, pe.blocked_reason, pe.risk_score, pe.evaluated_at
 FROM request_logs rl
 LEFT JOIN response_logs res ON rl.request_id = res.request_id
 LEFT JOIN firewall_events pe ON rl.request_id = pe.request_id
@@ -26,12 +26,12 @@ type GetRequestFullTraceRow struct {
 	ApiKeyID        pgtype.UUID
 	Model           string
 	TargetUrl       string
-	Messages        [][]byte
+	Inputs          [][]byte
 	Parameters      []byte
 	ReceivedAt      pgtype.Timestamptz
 	ClientIp        *netip.Addr
 	Archived        pgtype.Bool
-	Response        pgtype.Text
+	Response        []byte
 	LatencyMs       pgtype.Int4
 	FirewallEventID pgtype.UUID
 	RequestID_2     pgtype.UUID
@@ -58,7 +58,7 @@ func (q *Queries) GetRequestFullTrace(ctx context.Context, requestID pgtype.UUID
 			&i.ApiKeyID,
 			&i.Model,
 			&i.TargetUrl,
-			&i.Messages,
+			&i.Inputs,
 			&i.Parameters,
 			&i.ReceivedAt,
 			&i.ClientIp,
@@ -85,7 +85,7 @@ func (q *Queries) GetRequestFullTrace(ctx context.Context, requestID pgtype.UUID
 }
 
 const getUnarchivedRequests = `-- name: GetUnarchivedRequests :many
-SELECT request_id, user_id, api_key_id, model, target_url, messages, parameters, received_at, client_ip, archived FROM request_logs
+SELECT request_id, user_id, api_key_id, model, target_url, inputs, parameters, received_at, client_ip, archived FROM request_logs
 WHERE archived = FALSE
 AND received_at < now() - interval '10 minutes'
 `
@@ -105,7 +105,7 @@ func (q *Queries) GetUnarchivedRequests(ctx context.Context) ([]RequestLog, erro
 			&i.ApiKeyID,
 			&i.Model,
 			&i.TargetUrl,
-			&i.Messages,
+			&i.Inputs,
 			&i.Parameters,
 			&i.ReceivedAt,
 			&i.ClientIp,
@@ -190,10 +190,10 @@ func (q *Queries) InsertFirewallEvent(ctx context.Context, arg InsertFirewallEve
 
 const insertRequestLog = `-- name: InsertRequestLog :one
 INSERT INTO request_logs (
-  user_id, api_key_id, model, target_url, messages, parameters, client_ip
+  user_id, api_key_id, model, target_url, inputs, parameters, client_ip
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING request_id, user_id, api_key_id, model, target_url, messages, parameters, received_at, client_ip, archived
+RETURNING request_id, user_id, api_key_id, model, target_url, inputs, parameters, received_at, client_ip, archived
 `
 
 type InsertRequestLogParams struct {
@@ -201,7 +201,7 @@ type InsertRequestLogParams struct {
 	ApiKeyID   pgtype.UUID
 	Model      string
 	TargetUrl  string
-	Messages   [][]byte
+	Inputs     [][]byte
 	Parameters []byte
 	ClientIp   *netip.Addr
 }
@@ -212,7 +212,7 @@ func (q *Queries) InsertRequestLog(ctx context.Context, arg InsertRequestLogPara
 		arg.ApiKeyID,
 		arg.Model,
 		arg.TargetUrl,
-		arg.Messages,
+		arg.Inputs,
 		arg.Parameters,
 		arg.ClientIp,
 	)
@@ -223,7 +223,7 @@ func (q *Queries) InsertRequestLog(ctx context.Context, arg InsertRequestLogPara
 		&i.ApiKeyID,
 		&i.Model,
 		&i.TargetUrl,
-		&i.Messages,
+		&i.Inputs,
 		&i.Parameters,
 		&i.ReceivedAt,
 		&i.ClientIp,
@@ -234,30 +234,20 @@ func (q *Queries) InsertRequestLog(ctx context.Context, arg InsertRequestLogPara
 
 const insertResponseLog = `-- name: InsertResponseLog :one
 INSERT INTO response_logs (
-  request_id, response, latency_ms, input_tokens, output_tokens, total_tokens
+  request_id, response, latency_ms
 )
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING response_id, request_id, response, created_at, latency_ms, input_tokens, output_tokens, total_tokens
+VALUES ($1, $2, $3)
+RETURNING response_id, request_id, response, created_at, latency_ms
 `
 
 type InsertResponseLogParams struct {
-	RequestID    pgtype.UUID
-	Response     string
-	LatencyMs    pgtype.Int4
-	InputTokens  pgtype.Int4
-	OutputTokens pgtype.Int4
-	TotalTokens  pgtype.Int4
+	RequestID pgtype.UUID
+	Response  []byte
+	LatencyMs pgtype.Int4
 }
 
 func (q *Queries) InsertResponseLog(ctx context.Context, arg InsertResponseLogParams) (ResponseLog, error) {
-	row := q.db.QueryRow(ctx, insertResponseLog,
-		arg.RequestID,
-		arg.Response,
-		arg.LatencyMs,
-		arg.InputTokens,
-		arg.OutputTokens,
-		arg.TotalTokens,
-	)
+	row := q.db.QueryRow(ctx, insertResponseLog, arg.RequestID, arg.Response, arg.LatencyMs)
 	var i ResponseLog
 	err := row.Scan(
 		&i.ResponseID,
@@ -265,9 +255,6 @@ func (q *Queries) InsertResponseLog(ctx context.Context, arg InsertResponseLogPa
 		&i.Response,
 		&i.CreatedAt,
 		&i.LatencyMs,
-		&i.InputTokens,
-		&i.OutputTokens,
-		&i.TotalTokens,
 	)
 	return i, err
 }

@@ -174,7 +174,7 @@ func (m Generate) ToAuditRequest() audit.Request {
 		APIKeyID:   m.User.APIKeyID.String(),
 		Model:      m.Model.Model.String(),
 		TargetURL:  endpoint,
-		Messages:   messages,
+		Inputs:     messages,
 		Parameters: parameters,
 		ClientIP:   m.ClientIP,
 	}

@@ -24,6 +24,7 @@ type Config struct {
 }
 
 type rawFirewall struct {
+	ID                string  `yaml:"id"`
 	Enabled           bool    `yaml:"enabled"`
 	Type              string  `yaml:"type"`
 	Model             string  `yaml:"model"`
@@ -54,6 +55,11 @@ func LoadConfig(path string) (Config, error) {
 			return Config{}, fmt.Errorf("invalid firewall type: %w", err)
 		}
 
+		id, err := uuid.Parse(rf.ID)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid firewall ID: %w", err)
+		}
+
 		modelID, err := types.NewModelID(rf.Model)
 		if err != nil {
 			return Config{}, fmt.Errorf("invalid model: %w", err)
@@ -66,6 +72,7 @@ func LoadConfig(path string) (Config, error) {
 
 		cfg.Firewalls = append(cfg.Firewalls, Firewall{
 			Enabled:           rf.Enabled,
+			ID:                id,
 			Type:              ft,
 			Model:             model,
 			BlockingThreshold: rf.BlockingThreshold,
