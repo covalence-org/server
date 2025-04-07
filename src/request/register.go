@@ -12,9 +12,11 @@ import (
 
 // ModelInfo stores information about a registered model
 type rawRegister struct {
-	Name   string `json:"name" binding:"required"`
-	Model  string `json:"model" binding:"required"`
-	APIURL string `json:"api_url" binding:"required"`
+	Name     string  `json:"name" binding:"required"`
+	Model    string  `json:"model" binding:"required"`
+	APIURL   string  `json:"api_url" binding:"required"`
+	Provider string  `json:"provider" binding:"required"`
+	Status   *string `json:"status"`
 }
 
 func ParseRegister(c *gin.Context) (user.Model, error) {
@@ -29,9 +31,24 @@ func ParseRegister(c *gin.Context) (user.Model, error) {
 		return user.Model{}, errors.New("invalid name")
 	}
 
+	provider, err := types.NewModelProvider(r.Provider)
+	if err != nil {
+		return user.Model{}, errors.New("invalid model provider")
+	}
+
 	modelID, err := types.NewModelID(r.Model)
 	if err != nil {
 		return user.Model{}, errors.New("invalid model")
+	}
+
+	var status types.Status
+	if r.Status != nil {
+		status, err = types.NewStatus(*r.Status)
+		if err != nil {
+			return user.Model{}, errors.New("invalid status")
+		}
+	} else {
+		status = types.Active()
 	}
 
 	// Build target URL
@@ -45,6 +62,8 @@ func ParseRegister(c *gin.Context) (user.Model, error) {
 		Model:     modelID,
 		APIURL:    apiURL,
 		CreatedAt: time.Now(),
+		Provider:  provider,
+		Status:    status,
 	}, nil
 
 }

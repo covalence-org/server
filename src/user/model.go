@@ -13,4 +13,6 @@ type Model struct {
 	Model     types.ModelID // Real model name to use with API
 	APIURL    *url.URL
 	CreatedAt time.Time
+	Status    types.Status // Status of the model (active, inactive, etc.)
+	Provider  types.ModelProvider
 }

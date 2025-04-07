@@ -74,3 +74,39 @@ func NewAPIURL(value string) (APIURL, error) {
 	}
 	return APIURL{value}, nil
 }
+
+// ========================= ModelProvider =========================
+
+type ModelProvider struct {
+	raw string
+}
+
+func (s ModelProvider) Complete() bool {
+	return s.raw != ""
+}
+
+func (s ModelProvider) String() string {
+	return s.raw
+}
+
+func isValidModelProvider(value string) bool {
+	validTypes := map[string]struct{}{
+		"openai":    {},
+		"anthropic": {},
+		"google":    {},
+		"meta":      {},
+		"custom":    {},
+	}
+	_, exists := validTypes[value]
+	return exists
+}
+
+func NewModelProvider(value string) (ModelProvider, error) {
+	if value == "" {
+		return ModelProvider{}, errors.New("ModelProvider cannot be empty")
+	}
+	if !isValidModelProvider(value) {
+		return ModelProvider{}, fmt.Errorf("ModelProvider '%s' is invalid", value)
+	}
+	return ModelProvider{value}, nil
+}

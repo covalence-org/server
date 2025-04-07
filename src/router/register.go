@@ -22,8 +22,8 @@ func RegisterModel(c *gin.Context) {
 	}
 
 	r.Register(modelInfo)
-	log.Printf("Model registered: %s -> %s at %s", modelInfo.Name.String(), modelInfo.Model.String(), modelInfo.APIURL.String())
-
+	log.Printf("model registered: %s -> %s at %s", modelInfo.Name.String(), modelInfo.Model.String(), modelInfo.APIURL.String())
+	log.Println("model status set to: active")
 	c.JSON(http.StatusOK, gin.H{"status": "model registered", "name": modelInfo.Name.String(), "model": modelInfo.Model.String()})
 }
 
@@ -39,6 +39,9 @@ func ListRegisteredModels(c *gin.Context) {
 			"name":          info.Name.String(),
 			"model":         info.Model.String(),
 			"registered_at": info.CreatedAt.Format(time.RFC3339),
+			"status":        info.Status.String(),
+			"provider":      info.Provider.String(),
+			"api_url":       info.APIURL.String(),
 		})
 	}
 
