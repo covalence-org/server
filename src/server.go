@@ -25,6 +25,13 @@ func Start() {
 	// Create model registry
 	registry := register.NewModelRegistry()
 
+	// Load Model Providers
+	modelProviders, err := register.ReadModelProviders()
+	if err != nil {
+		log.Fatalf("failed to load model providers: %v", err)
+		return
+	}
+
 	// Load Internal Models
 	internal.LoadModels("models.yaml")
 
@@ -63,6 +70,12 @@ func Start() {
 	r.GET("/model/list", func(c *gin.Context) {
 		c.Set("registry", registry)
 		router.ListRegisteredModels(c)
+	})
+
+	// List registered models endpoint
+	r.GET("/model/list/providers", func(c *gin.Context) {
+		c.Set("providers", modelProviders)
+		router.ListModelProviders(c)
 	})
 
 	// Health check endpoint

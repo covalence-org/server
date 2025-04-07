@@ -2,6 +2,7 @@ package register
 
 import (
 	"covalence/src/user"
+	"fmt"
 	"sync"
 )
 
@@ -18,10 +19,15 @@ func NewModelRegistry() *Registry {
 	}
 }
 
-// RegisterModel adds or updates model information
+// RegisterModel adds model information
 func (r *Registry) Register(modelInfo user.Model) error {
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
+
+	// check if model name already exists
+	if _, exists := r.Models[modelInfo.Name.String()]; exists {
+		return fmt.Errorf("model with name %s already exists", modelInfo.Name.String())
+	}
 	r.Models[modelInfo.Name.String()] = modelInfo
 
 	return nil
