@@ -1,11 +1,11 @@
 package promptInjection
 
 import (
+	"covalence/src/internal"
+	textClassification "covalence/src/internal/text_classification"
+	"covalence/src/types"
+	"covalence/src/utils"
 	"log"
-	"netrunner/src/internal"
-	textClassification "netrunner/src/internal/text_classification"
-	"netrunner/src/types"
-	"netrunner/src/utils"
 	"strings"
 )
 

@@ -2,14 +2,14 @@ package server
 
 import (
 	"context"
+	"covalence/src/db/postgres"
+	"covalence/src/firewall"
+	"covalence/src/internal"
+	"covalence/src/register"
+	"covalence/src/router"
 	"fmt"
 	"log"
 	"net/http"
-	"netrunner/src/db/postgres"
-	"netrunner/src/firewall"
-	"netrunner/src/internal"
-	"netrunner/src/register"
-	"netrunner/src/router"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +37,7 @@ func Start() {
 
 	// Load Audit DB
 	// Connect to database
-	db, err := postgres.New(ctx, "user=alialh dbname=netrunner_dev sslmode=disable")
+	db, err := postgres.New(ctx, "user=alialh dbname=covalence_dev sslmode=disable")
 	if err != nil {
 		log.Fatal("Database connection failed:", err)
 	}

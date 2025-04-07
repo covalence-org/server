@@ -2,8 +2,8 @@ package postgres
 
 import (
 	"context"
+	"covalence/src/db/postgres/sqlc"
 	"fmt"
-	"netrunner/src/db/postgres/sqlc"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"

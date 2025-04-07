@@ -1,10 +1,10 @@
-# Netrunner
+# covalence
 
 A firewall for your AI models.
 
 ## Overview
 
-Netrunner acts as a middleware layer between your applications and AI service providers (like OpenAI, Anthropic, etc.). It allows you to:
+covalence acts as a middleware layer between your applications and AI service providers (like OpenAI, Anthropic, etc.). It allows you to:
 
 - Register custom aliases for AI models
 - Validate requests before they reach the AI provider
@@ -19,24 +19,24 @@ This proxy is designed to be simple yet effective, focusing on performance and s
 
 ```bash
 # Clone the repository
-git clone https://github.com/ratcht/netrunner.git
-cd netrunner
+git clone https://github.com/ratcht/covalence.git
+cd covalence
 
 # Build the project
-go build -o netrunner
+go build -o covalence
 
 # Run the server
-./netrunner
+./covalence
 ```
 
 ### Using Docker
 
 ```bash
 # Build the Docker image
-docker build -t netrunner .
+docker build -t covalence .
 
 # Run the container
-docker run -p 8080:8080 netrunner
+docker run -p 8080:8080 covalence
 ```
 
 ## Usage

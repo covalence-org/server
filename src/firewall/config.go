@@ -1,9 +1,9 @@
 package firewall
 
 import (
+	"covalence/src/internal"
+	"covalence/src/types"
 	"fmt"
-	"netrunner/src/internal"
-	"netrunner/src/types"
 	"os"
 
 	"github.com/google/uuid"

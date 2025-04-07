@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
-	"netrunner/src/audit"
-	"netrunner/src/db/postgres"
-	custom "netrunner/src/firewall/custom"
-	hallucinationRisk "netrunner/src/firewall/hallucination_risk"
-	maliciousIntent "netrunner/src/firewall/malicious_intent"
-	obfuscation "netrunner/src/firewall/obfuscation"
-	policyViolation "netrunner/src/firewall/policy_violation"
-	promptInjection "netrunner/src/firewall/prompt_injection"
-	sensitiveData "netrunner/src/firewall/sensitive_data"
-	spam "netrunner/src/firewall/spam"
-	"netrunner/src/request"
-	"netrunner/src/utils"
-
-	"netrunner/src/types"
+	"covalence/src/audit"
+	"covalence/src/db/postgres"
+	custom "covalence/src/firewall/custom"
+	hallucinationRisk "covalence/src/firewall/hallucination_risk"
+	maliciousIntent "covalence/src/firewall/malicious_intent"
+	obfuscation "covalence/src/firewall/obfuscation"
+	policyViolation "covalence/src/firewall/policy_violation"
+	promptInjection "covalence/src/firewall/prompt_injection"
+	sensitiveData "covalence/src/firewall/sensitive_data"
+	spam "covalence/src/firewall/spam"
+	"covalence/src/request"
+	"covalence/src/types"
+	"covalence/src/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +27,7 @@ import (
 func (f Firewall) Apply(messages []types.Message) (bool, error) {
 	message := messages[len(messages)-1]
 	if f.Enabled {
-		log.Printf(":::: running %s firewall ::::", f.Type.String())
+		log.Printf("================ running %s firewall ================", f.Type.String())
 		switch f.Type.String() {
 		case "prompt-injection":
 			return promptInjection.Run(message, f.Model, f.BlockingThreshold)
@@ -66,6 +66,7 @@ func HookFirewalls(c *gin.Context, payload *request.Generate, config *Config) (i
 		}
 
 		// Log the firewall event
+		loggingStartTime := time.Now()
 		utils.BoxLog(fmt.Sprintf("audit loggging: firewall event %s 📝", firewall.Type.String()))
 
 		fe := audit.FirewallEvent{
@@ -78,6 +79,9 @@ func HookFirewalls(c *gin.Context, payload *request.Generate, config *Config) (i
 		}
 
 		audit.LogFirewallEvent(c, fe, db)
+
+		loggingEndTime := time.Since(loggingStartTime)
+		log.Printf("firewall audit logging took %s", loggingEndTime)
 
 		if !res {
 			return http.StatusForbidden, errors.New("request rejected: blocked by firewall")
