@@ -21,7 +21,11 @@ func RegisterModel(c *gin.Context) {
 		return
 	}
 
-	r.Register(modelInfo)
+	err = r.Register(modelInfo)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	log.Printf("model registered: %s -> %s at %s", modelInfo.Name.String(), modelInfo.Model.String(), modelInfo.APIURL.String())
 	log.Println("model status set to: active")
 	c.JSON(http.StatusOK, gin.H{"status": "model registered", "name": modelInfo.Name.String(), "model": modelInfo.Model.String()})
@@ -46,4 +50,27 @@ func ListRegisteredModels(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"models": models})
+}
+
+func ListModelProviders(c *gin.Context) {
+
+	r := c.MustGet("providers").(*[]register.ModelProvider)
+
+	modelProviders := make([]map[string]interface{}, 0, len(*r))
+	for _, provider := range *r {
+
+		// turn models into list of string
+		models := make([]string, 0, len(provider.Models))
+		for _, model := range provider.Models {
+			models = append(models, model.String())
+		}
+
+		modelProviders = append(modelProviders, map[string]interface{}{
+			"provider": provider.Provider.String(),
+			"models":   models,
+			"api_url":  provider.APIURL.String(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"providers": modelProviders})
 }
