@@ -1,12 +1,13 @@
 package request
 
 import (
+	"covalence/src/audit"
+	"covalence/src/register"
+	"covalence/src/types"
+	"covalence/src/user"
 	"errors"
+	"log"
 	"net/url"
-	"netrunner/src/audit"
-	"netrunner/src/register"
-	"netrunner/src/types"
-	"netrunner/src/user"
 	"path"
 	"strings"
 
@@ -72,8 +73,14 @@ func ParseGenerate(c *gin.Context, registry *register.Registry) (Generate, error
 	clientIP := c.RemoteIP()
 
 	// Build target URL
-	urlRaw := path.Join(modelInfo.APIURL.String(), c.Param("path"))
-	targetURL, err := url.Parse(urlRaw)
+	baseURL := modelInfo.APIURL // assuming this is a *url.URL
+	pathToAdd := c.Param("path")
+
+	// Clone the URL to avoid mutating the original
+	targetURL := *baseURL
+	targetURL.Path = path.Join(targetURL.Path, pathToAdd)
+
+	log.Printf("target URL raw: %s", targetURL.String())
 	if err != nil {
 		return Generate{}, err
 	}
@@ -97,7 +104,7 @@ func ParseGenerate(c *gin.Context, registry *register.Registry) (Generate, error
 	payload := Generate{
 		Model:       modelInfo,
 		IsStreaming: rg.IsStreaming,
-		TargetURL:   *targetURL,
+		TargetURL:   targetURL,
 		ClientIP:    clientIP,
 		Messages:    messagesArray,
 		User:        user,

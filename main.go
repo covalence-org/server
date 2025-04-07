@@ -1,7 +1,7 @@
 package main
 
 import (
-	"netrunner/src"
+	server "covalence/src"
 )
 
 func main() {

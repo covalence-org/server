@@ -1,10 +1,10 @@
 package request
 
 import (
+	"covalence/src/types"
+	"covalence/src/user"
 	"errors"
 	"net/url"
-	"netrunner/src/types"
-	"netrunner/src/user"
 	"time"
 
 	"github.com/gin-gonic/gin"

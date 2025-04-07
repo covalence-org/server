@@ -1,10 +1,10 @@
 package router
 
 import (
+	"covalence/src/register"
+	"covalence/src/request"
 	"log"
 	"net/http"
-	"netrunner/src/register"
-	"netrunner/src/request"
 	"time"
 
 	"github.com/gin-gonic/gin"

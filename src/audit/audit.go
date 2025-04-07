@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"netrunner/src/db/postgres"
-	"netrunner/src/db/postgres/sqlc"
+	"covalence/src/db/postgres"
+	"covalence/src/db/postgres/sqlc"
 )
 
 // Trace represents a full request trace with all related data

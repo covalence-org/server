@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"covalence/src/audit"
+	"covalence/src/db/postgres"
 	"fmt"
 	"log"
-	"netrunner/src/audit"
-	"netrunner/src/db/postgres"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 	ctx := context.Background()
 
 	// Connect to database
-	db, err := postgres.New(ctx, "user=alialh dbname=netrunner_dev sslmode=disable")
+	db, err := postgres.New(ctx, "user=alialh dbname=covalence_dev sslmode=disable")
 	if err != nil {
 		log.Fatal("Database connection failed:", err)
 	}

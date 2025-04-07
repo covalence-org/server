@@ -2,12 +2,12 @@ package textClassification
 
 import (
 	"bytes"
+	"covalence/src/internal"
+	"covalence/src/types"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
-	"netrunner/src/internal"
-	"netrunner/src/types"
 )
 
 var (

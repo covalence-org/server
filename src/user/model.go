@@ -1,8 +1,8 @@
 package user
 
 import (
+	"covalence/src/types"
 	"net/url"
-	"netrunner/src/types"
 	"time"
 )
 

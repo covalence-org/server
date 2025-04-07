@@ -1,4 +1,4 @@
-module netrunner
+module covalence
 
 go 1.24.0
 

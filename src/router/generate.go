@@ -2,17 +2,17 @@ package router
 
 import (
 	"context"
+	"covalence/src/audit"
+	"covalence/src/db/postgres"
+	"covalence/src/firewall"
+	"covalence/src/register"
+	"covalence/src/request"
+	"covalence/src/utils"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"netrunner/src/audit"
-	"netrunner/src/db/postgres"
-	"netrunner/src/firewall"
-	"netrunner/src/register"
-	"netrunner/src/request"
-	"netrunner/src/utils"
 	"strings"
 	"time"
 
@@ -36,16 +36,17 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 		metrics.TotalProcessTime = time.Since(metrics.StartTime)
 
 		logData, _ := json.Marshal(map[string]interface{}{
-			"timestamp":       time.Now().Format(time.RFC3339),
-			"name":            metrics.Name.String(),
-			"model":           metrics.Model.String(),
-			"status":          metrics.StatusCode,
-			"lookup_ms":       metrics.ModelLookupTime.Milliseconds(),
-			"body_process_ms": metrics.RequestBodyTime.Milliseconds(),
-			"upstream_ms":     metrics.UpstreamLatency.Milliseconds(),
-			"total_ms":        metrics.TotalProcessTime.Milliseconds(),
-			"streaming":       metrics.StreamingResponse,
-			"path":            c.Param("path"),
+			"timestamp":              time.Now().Format(time.RFC3339),
+			"name":                   metrics.Name.String(),
+			"model":                  metrics.Model.String(),
+			"status":                 metrics.StatusCode,
+			"request_preparation_ms": metrics.RequestPreparationTime.Milliseconds(),
+			"hook_time_ms":           metrics.HookTime.Milliseconds(),
+			"body_process_ms":        metrics.RequestBodyTime.Milliseconds(),
+			"upstream_ms":            metrics.UpstreamLatency.Milliseconds(),
+			"total_ms":               metrics.TotalProcessTime.Milliseconds(),
+			"streaming":              metrics.StreamingResponse,
+			"path":                   c.Param("path"),
 		})
 
 		utils.BoxLog(fmt.Sprintf("request_metrics: %s", logData))
@@ -55,7 +56,7 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 
 	utils.BoxLog(fmt.Sprintf("reading & parsing request made to %s 🚀", c.Param("path")))
 
-	modelLookupStart := time.Now()
+	requestPreparationStart := time.Now()
 
 	generateRequest, err := request.ParseGenerate(c, registry)
 	if err != nil {
@@ -79,9 +80,11 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 
 	// ========================= Init Metrics =========================
 
-	metrics.ModelLookupTime = time.Since(modelLookupStart)
+	metrics.RequestPreparationTime = time.Since(requestPreparationStart)
 	metrics.Name = generateRequest.Model.Name
 	metrics.Model = generateRequest.Model.Model
+
+	hookStartTime := time.Now()
 
 	// ========================= Run Hook ===========================
 
@@ -95,6 +98,8 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 		utils.BoxLog("no hook function provided ❌")
 	}
 
+	metrics.HookTime = time.Since(hookStartTime)
+
 	// ========================= Build Request =========================
 	utils.BoxLog("building request 🏗️")
 
@@ -105,7 +110,6 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request to json"})
 		return
 	}
-	metrics.RequestBodyTime = time.Since(bodyProcessStart)
 
 	// Create context for the request
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 55*time.Second)
@@ -136,11 +140,13 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 	}
 
 	// Make the upstream request
+	metrics.RequestBodyTime = time.Since(bodyProcessStart)
+
 	utils.BoxLog(fmt.Sprintf("making request to %s 🚀", generateRequest.TargetURL.String()))
 	upstreamStart := time.Now()
 	resp, err := httpClient.Do(proxyReq)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "upstream service unavailable"})
+		c.JSON(http.StatusBadGateway, gin.H{"error": "upstream service unavailable", "message": err.Error()})
 		return
 	}
 	metrics.UpstreamLatency = time.Since(upstreamStart)
@@ -185,8 +191,15 @@ func Generate(c *gin.Context, firewallConfig *firewall.Config, hook func(*gin.Co
 	} else {
 		// For non-streaming, just copy the entire response
 		responseBody, _ = io.ReadAll(resp.Body)
-		// Log the response body for debugging purposes
-		utils.BoxLog(fmt.Sprintf("response body: %s", string(responseBody)))
+
+		// Write to body
+		_, err := c.Writer.Write(responseBody)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write response"})
+			return
+		}
+		// Flush the response writer to ensure all data is sent
+		c.Writer.Flush()
 	}
 
 	var response map[string]interface{}

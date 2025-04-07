@@ -1,9 +1,9 @@
 package maliciousIntent
 
 import (
+	"covalence/src/internal"
+	"covalence/src/types"
 	"log"
-	"netrunner/src/internal"
-	"netrunner/src/types"
 )
 
 func Run(message types.Message, model internal.Model, blockingThreshold float32) (bool, error) {

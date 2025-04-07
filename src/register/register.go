@@ -1,7 +1,7 @@
 package register
 
 import (
-	"netrunner/src/user"
+	"covalence/src/user"
 	"sync"
 )
 

@@ -1,9 +1,9 @@
 package internal
 
 import (
+	"covalence/src/types"
 	"errors"
 	"log"
-	"netrunner/src/types"
 	"os"
 	"sync"
 
