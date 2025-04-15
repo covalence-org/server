@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-func main() {
+func main2() {
 	// fmt.Println(uuid.New())
 	ctx := context.Background()
 
