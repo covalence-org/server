@@ -14,9 +14,13 @@ import (
 	"strings"
 	"time"
 
+	docs "covalence/docs"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/supabase-community/supabase-go"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func Start() {
@@ -111,7 +115,8 @@ func Start() {
 		Timeout: 60 * time.Second,
 	}
 
-	// Routes (all protected)
+	// ========== Routes==========
+	docs.SwaggerInfo.BasePath = "/models"
 	model := server.Group("/model")
 	{
 		model.POST("/register", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
@@ -129,6 +134,7 @@ func Start() {
 	}
 
 	// auth API group
+	docs.SwaggerInfo.BasePath = "/auth"
 	auth := server.Group("/auth")
 	{
 		auth.POST("/login", func(c *gin.Context) {
@@ -137,8 +143,8 @@ func Start() {
 		auth.POST("/signup", func(c *gin.Context) {
 			router.UserSignup(c, serviceClient)
 		})
-		auth.POST("/refresh", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
-			router.UserRefreshToken(c)
+		auth.POST("/refresh", func(c *gin.Context) {
+			router.UserRefreshToken(c, serviceClient)
 		})
 		auth.POST("/me", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
 			router.UserMe(c)
@@ -148,6 +154,7 @@ func Start() {
 	server.GET("/health", router.Health)
 
 	// v1 API group
+	docs.SwaggerInfo.BasePath = "/v1"
 	v1 := server.Group("/v1")
 	// Apply AuthMiddleware to all routes
 	v1.Use(middleware.Auth(serviceClient, anonKey, supabaseURL))
@@ -159,6 +166,9 @@ func Start() {
 			router.Generate(c, &firewallConfig, firewall.HookFirewalls)
 		})
 	}
+
+	// Set up swagger docs
+	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	// Start server
 	port := os.Getenv("PORT")
