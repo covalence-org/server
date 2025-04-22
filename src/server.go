@@ -5,7 +5,7 @@ import (
 	"covalence/src/db/postgres"
 	"covalence/src/firewall"
 	"covalence/src/internal"
-	"covalence/src/middleware" // Import middleware package
+	"covalence/src/middleware"
 	"covalence/src/register"
 	"covalence/src/router"
 	"log"
@@ -15,43 +15,36 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv" // Optional: for loading .env file
+	"github.com/joho/godotenv"
+	"github.com/supabase-community/supabase-go"
 )
 
 func Start() {
-	// Optional: Load .env file for local development
+	// Load .env (if present)
 	err := godotenv.Load()
-	if err != nil && !os.IsNotExist(err) { // Only log real errors, not "file not found"
+	if err != nil && !os.IsNotExist(err) {
 		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 
-	// Configure Gin mode
-	ginMode := os.Getenv("GIN_MODE")
-	if ginMode == "release" {
+	// Gin mode
+	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 		log.Println("Running in Debug Mode")
 	}
 
-	// Initialize shared resources (like Redis) *before* setting up middleware that depends on them
-	middleware.InitRedis() // Initialize Redis connection
+	// Init Redis for rate limiter, sessions, etc.
+	middleware.InitRedis()
 
-	// --- Gin Engine Setup ---
-	server := gin.New() // Use New for explicit middleware control
-
+	// Create Gin engine with global middleware
+	server := gin.New()
 	// Configure trusted proxies
 	// For development, you might want to trust only localhost
 	if gin.Mode() == gin.DebugMode {
 		// In debug mode, only trust localhost
 		server.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	} else {
-		// In production, you should set this to your known proxy IPs
-		// This could be your load balancer, reverse proxy IPs, etc.
-		// Example for AWS ELB: server.SetTrustedProxies([]string{"10.0.0.0/8"})
-		// Or if not using a proxy: server.SetTrustedProxies(nil)
-
-		// Read from environment variable if available
 		trustedProxies := os.Getenv("TRUSTED_PROXIES")
 		if trustedProxies != "" {
 			server.SetTrustedProxies(strings.Split(trustedProxies, ","))
@@ -61,24 +54,30 @@ func Start() {
 		}
 	}
 
-	// --- Global Middleware (Order Matters!) ---
-	// 1. Logger & Recovery (Essential)
-	server.Use(gin.Logger())
-	server.Use(gin.Recovery())
+	server.Use(
+		gin.Logger(),
+		gin.Recovery(),
+		middleware.CorsHandler(),
+		middleware.RateLimiter(),
+		middleware.SessionHandler(),
+		middleware.SecureHeaders(),
+	)
 
-	// 2. CORS (Handles browser pre-flight OPTIONS requests early)
-	server.Use(middleware.CorsHandler()) // Reads CORS_ALLOWED_ORIGINS env var
+	// Supabase setup (admin and anon keys)
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	serviceRoleKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+	anonKey := os.Getenv("SUPABASE_ANON_KEY")
+	if serviceRoleKey == "" || anonKey == "" {
+		log.Fatal("FATAL: SUPABASE_SERVICE_ROLE_KEY and SUPABASE_ANON_KEY must be set")
+	}
 
-	// 3. Rate Limiter (Apply early to protect resources)
-	server.Use(middleware.RateLimiter()) // Reads RATE_LIMIT env var, uses Redis
+	// Admin client for server-side operations
+	serviceClient, err := supabase.NewClient(supabaseURL, serviceRoleKey, &supabase.ClientOptions{Headers: map[string]string{}})
+	if err != nil {
+		log.Fatalf("Failed to initialize Supabase service client: %v", err)
+	}
 
-	// 4. Session Management (Required before routes that use sessions)
-	server.Use(middleware.SessionHandler()) // Reads SESSION_SECRET_KEY env var, uses Redis
-
-	// 5. Security Headers (Applied to outgoing responses)
-	server.Use(middleware.SecureHeaders()) // Reads GIN_MODE for dev/prod settings
-
-	// --- Application Specific Setup ---
+	// Load configs and models
 	ctx := context.Background()
 	registry := register.NewModelRegistry()
 	modelProviders, err := register.ReadModelProviders()
@@ -91,7 +90,7 @@ func Start() {
 		log.Fatalf("failed to load firewall config: %v", err)
 	}
 
-	// Database Connection (using Env Var)
+	// Database connection
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("FATAL: DATABASE_URL environment variable not set!")
@@ -102,7 +101,7 @@ func Start() {
 	}
 	defer db.Close()
 
-	// HTTP Client
+	// HTTP client for external calls
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:        100,
@@ -112,50 +111,59 @@ func Start() {
 		Timeout: 60 * time.Second,
 	}
 
-	// --- Routes ---
-	server.POST("/model/register", func(c *gin.Context) {
-		c.Set("registry", registry)
-		router.RegisterModel(c)
-	})
+	// Routes (all protected)
+	model := server.Group("/model")
+	{
+		model.POST("/register", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
+			c.Set("registry", registry)
+			router.RegisterModel(c)
+		})
+		model.GET("/list", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
+			c.Set("registry", registry)
+			router.ListRegisteredModels(c)
+		})
+		model.GET("/list/providers", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
+			c.Set("providers", modelProviders)
+			router.ListModelProviders(c)
+		})
+	}
 
-	server.GET("/model/list", func(c *gin.Context) {
-		c.Set("registry", registry)
-		router.ListRegisteredModels(c)
-	})
+	// auth API group
+	auth := server.Group("/auth")
+	{
+		auth.POST("/login", func(c *gin.Context) {
+			router.UserLogin(c, serviceClient)
+		})
+		auth.POST("/signup", func(c *gin.Context) {
+			router.UserSignup(c, serviceClient)
+		})
+		auth.POST("/refresh", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
+			router.UserRefreshToken(c)
+		})
+		auth.POST("/me", middleware.Auth(serviceClient, anonKey, supabaseURL), func(c *gin.Context) {
+			router.UserMe(c)
+		})
+	}
 
-	server.GET("/model/list/providers", func(c *gin.Context) {
-		c.Set("providers", modelProviders)
-		router.ListModelProviders(c)
-	})
+	server.GET("/health", router.Health)
 
-	// Health check - Note: This is now also rate-limited.
-	// If you need it excluded, define it *before* server.Use(middleware.RateLimiter())
-	// or use more advanced rate limiter configurations (e.g., path exclusion).
-	server.GET("/health", func(c *gin.Context) {
-		router.Health(c)
-	})
-
-	// API Group
+	// v1 API group
 	v1 := server.Group("/v1")
-	// Add authentication middleware here if needed:
-	// v1.Use(middleware.RequireAuth())
+	// Apply AuthMiddleware to all routes
+	v1.Use(middleware.Auth(serviceClient, anonKey, supabaseURL))
 	{
 		v1.Any("/*path", func(c *gin.Context) {
-			// Access session data if needed:
-			// session := sessions.Default(c)
-			// userID := session.Get("userID")
-
 			c.Set("registry", registry)
-			c.Set("httpClient", httpClient)
 			c.Set("db", db)
+			c.Set("httpClient", httpClient)
 			router.Generate(c, &firewallConfig, firewall.HookFirewalls)
 		})
 	}
 
-	// --- Start Server ---
+	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Default port
+		port = "8080"
 	}
 	log.Printf("Starting server on port %s (Mode: %s)", port, gin.Mode())
 	if err := server.Run(":" + port); err != nil {
