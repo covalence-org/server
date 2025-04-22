@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"context"
@@ -6,9 +6,10 @@ import (
 	"covalence/src/db/postgres"
 	"fmt"
 	"log"
+	"testing"
 )
 
-func main2() {
+func TestLogging(t *testing.T) {
 	// fmt.Println(uuid.New())
 	ctx := context.Background()
 

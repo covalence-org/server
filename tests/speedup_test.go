@@ -1,8 +1,9 @@
-package main
+package tests
 
 import (
 	"context"
 	"fmt"
+	"testing"
 	"time"
 )
 
@@ -41,7 +42,7 @@ func runStreamingAPI(ctx context.Context, input string, doneChan chan<- string) 
 	}
 }
 
-func main() {
+func TestSpeedup(t *testing.T) {
 	input := "some user input"
 
 	ctx, cancel := context.WithCancel(context.Background())
