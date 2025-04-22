@@ -20,21 +20,21 @@ type ModelProvider struct {
 	APIURL   types.APIURL
 }
 
-func ReadModelProviders() (*[]ModelProvider, error) {
+func ReadModelProviders() ([]*ModelProvider, error) {
 	data, err := os.ReadFile("providers.yaml") // or whatever your file is named
 	if err != nil {
 		log.Fatalf("error reading file: %v", err)
-		return &[]ModelProvider{}, err
+		return nil, err
 	}
 
 	var rawModelProviders []rawModelProviders
 	err = yaml.Unmarshal(data, &rawModelProviders)
 	if err != nil {
 		log.Fatalf("error unmarshalling YAML: %v", err)
-		return &[]ModelProvider{}, err
+		return nil, err
 	}
 
-	var modelProviders []ModelProvider
+	var modelProviders []*ModelProvider
 	for _, rawModelProvider := range rawModelProviders {
 		provider, err := types.NewModelProvider(rawModelProvider.Provider)
 		if err != nil {
@@ -56,12 +56,12 @@ func ReadModelProviders() (*[]ModelProvider, error) {
 			continue
 		}
 
-		modelProviders = append(modelProviders, ModelProvider{
+		modelProviders = append(modelProviders, &ModelProvider{
 			Models:   models,
 			Provider: provider,
 			APIURL:   apiURL,
 		})
 	}
 
-	return &modelProviders, nil
+	return modelProviders, nil
 }
