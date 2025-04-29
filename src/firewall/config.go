@@ -10,14 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Firewall struct {
-	Enabled           bool
-	ID                uuid.UUID
-	Type              types.FirewallType
-	Model             internal.Model
-	BlockingThreshold float32
-}
-
 type Config struct {
 	Name      string
 	Firewalls []Firewall

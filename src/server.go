@@ -186,6 +186,14 @@ func registerRoutes(
 			router.Generate(c, &firewallConfig, firewall.HookFirewalls)
 		})
 	}
+
+	dead := server.Group("/dead")
+	{
+		dead.Any("/*path", func(c *gin.Context) {
+			c.Set("httpClient", httpClient)
+			router.PassThrough(c)
+		})
+	}
 }
 
 // setupSwagger builds a Swagger 2.0 spec from the registered Gin routes,

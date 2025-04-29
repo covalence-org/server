@@ -17,12 +17,22 @@ import (
 	promptInjection "covalence/src/firewall/prompt_injection"
 	sensitiveData "covalence/src/firewall/sensitive_data"
 	spam "covalence/src/firewall/spam"
+	"covalence/src/internal"
 	"covalence/src/request"
 	"covalence/src/types"
 	"covalence/src/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
+
+type Firewall struct {
+	Enabled           bool
+	ID                uuid.UUID
+	Type              types.FirewallType
+	Model             internal.Model
+	BlockingThreshold float32
+}
 
 func (f Firewall) Apply(messages []types.Message) (bool, error) {
 	message := messages[len(messages)-1]
